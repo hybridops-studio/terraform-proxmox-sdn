@@ -1,6 +1,6 @@
 # Proxmox API configuration
 proxmox_url      = "https://192.168.0.27:8006/api2/json"
-proxmox_token    = "automation@pam!infra-token=83533b51-1a4a-40b6-b498-16c4f3ab69ad"
+proxmox_token    = "automation@pam!infra-token=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 proxmox_insecure = true
 
 # Proxmox node configuration

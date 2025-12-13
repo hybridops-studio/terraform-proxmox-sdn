@@ -16,7 +16,6 @@ provider "proxmox" {
 }
 
 module "sdn" {
-  # When running from within this repo, point to the root module
   source = "../.."
 
   # SDN zone ID must be <= 8 chars, lowercase, no dashes
