@@ -16,9 +16,12 @@ provider "proxmox" {
 }
 
 module "sdn" {
+  # When running from within this repo, point to the root module
   source = "../.."
 
-  zone_name    = "basic-zone"
+  # SDN zone ID must be <= 8 chars, lowercase, no dashes
+  zone_name = "hybzone"
+
   proxmox_node = var.proxmox_node
   proxmox_host = var.proxmox_host
 
@@ -31,6 +34,7 @@ module "sdn" {
         mgmt = {
           cidr             = "10.10.0.0/24"
           gateway          = "10.10.0.1"
+          vnet             = "vnetmgmt"
           dhcp_enabled     = true
           dhcp_range_start = "10.10.0.100"
           dhcp_range_end   = "10.10.0.200"
@@ -43,12 +47,4 @@ module "sdn" {
   proxmox_url      = var.proxmox_url
   proxmox_token    = var.proxmox_token
   proxmox_insecure = var.proxmox_insecure
-}
-
-output "zone_name" {
-  value = module.sdn.zone_name
-}
-
-output "vnets" {
-  value = module.sdn.vnets
 }

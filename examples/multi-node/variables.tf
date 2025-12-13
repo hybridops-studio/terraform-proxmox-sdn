@@ -4,7 +4,7 @@ variable "proxmox_url" {
 }
 
 variable "proxmox_token" {
-  description = "Proxmox API token (USER@REALM! TOKENID=UUID)"
+  description = "Proxmox API token (USER@REALM!TOKENID=UUID)"
   type        = string
   sensitive   = true
 }

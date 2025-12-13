@@ -18,12 +18,12 @@ provider "proxmox" {
 module "sdn" {
   source = "../.."
 
-  zone_name    = "static-zone"
+  zone_name    = "statzone"
   proxmox_node = var.proxmox_node
   proxmox_host = var.proxmox_host
 
   vnets = {
-    vnetstatic = {
+    vstatic = { # <= 8 chars, OK as VNet ID
       vlan_id     = 100
       description = "Static IP Network - No DHCP"
 
@@ -31,8 +31,8 @@ module "sdn" {
         static = {
           cidr         = "10.100.0.0/24"
           gateway      = "10.100.0.1"
+          vnet         = "vstatic" # must match the key above
           dhcp_enabled = false
-          # DHCP fields omitted when dhcp_enabled = false
         }
       }
     }

@@ -19,6 +19,7 @@ Designed for Proxmox VE 8.x environments requiring repeatable, version-controlle
 ## Requirements
 
 - Proxmox VE 8.x with SDN enabled
+- Proxmox Terraform provider (Telmate) v3.x
 - Terraform 1.5+
 - SSH access to Proxmox node for DHCP configuration
 

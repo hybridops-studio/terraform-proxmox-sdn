@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced error handling
 - NetBox integration example
 
+## [0.1.1] - 2025-12-13
+
+### Fixed
+- Corrected `examples/basic` SDN configuration to match the current module inputs.
+- Updated README and example documentation for clarity and consistency.
+
 ## [0.1.0] - 2025-12-13
 
 ### Added
@@ -20,4 +26,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - VNet and subnet provisioning
 - Automated dnsmasq DHCP configuration
 - Gateway IP assignment on VNet bridges
-- Examples:  basic, homelab-six-vlans, no-dhcp, multi-node
+- Examples: basic, homelab-six-vlans, no-dhcp, multi-node

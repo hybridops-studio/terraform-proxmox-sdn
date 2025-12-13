@@ -42,7 +42,19 @@ resource "proxmox_virtual_environment_sdn_applier" "apply" {
   ]
 }
 
+locals {
+  dhcp_enabled = length(flatten([
+    for vnet_key, vnet in var.vnets : [
+      for subnet_key, subnet in vnet.subnets :
+      true
+      if try(subnet.dhcp_enabled, false)
+    ]
+  ])) > 0
+}
+
 resource "null_resource" "dhcp_setup" {
+  count = local.dhcp_enabled ? 1 : 0
+
   triggers = {
     vnets_hash   = md5(jsonencode(var.vnets))
     proxmox_host = var.proxmox_host

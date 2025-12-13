@@ -1,8 +1,8 @@
 # Proxmox API configuration
-proxmox_url      = "https://<PROXMOX-IP>:8006/api2/json"
-proxmox_token    = "root@pam!terraform=<YOUR-API-TOKEN-SECRET>"
+proxmox_url      = "https://192.168.0.27:8006/api2/json"
+proxmox_token    = "automation@pam!infra-token=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 proxmox_insecure = true
 
 # Proxmox node configuration
-proxmox_node = "<NODE-NAME>"
-proxmox_host = "<PROXMOX-IP>"
+proxmox_node = "hybridhub"
+proxmox_host = "192.168.0.27"
