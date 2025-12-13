@@ -42,3 +42,17 @@ module "sdn" {
   proxmox_token    = var.proxmox_token
   proxmox_insecure = var.proxmox_insecure
 }
+output "zone_name" {
+  description = "SDN zone name"
+  value       = module.sdn.zone_name
+}
+
+output "vnets" {
+  description = "Created VNets"
+  value       = module.sdn.vnets
+}
+
+output "subnets" {
+  description = "Created subnets with DHCP configuration"
+  value       = module.sdn.subnets
+}

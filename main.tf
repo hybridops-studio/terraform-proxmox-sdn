@@ -61,10 +61,18 @@ resource "null_resource" "dhcp_setup" {
   }
 
   provisioner "local-exec" {
-    command = "${path.module}/scripts/setup-dhcp.sh"
+    command = "bash ${path.module}/scripts/setup-dhcp.sh"
     environment = {
       PROXMOX_HOST = var.proxmox_host
       VNETS_JSON   = jsonencode(var.vnets)
+    }
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "bash ${path.module}/scripts/cleanup-dhcp.sh"
+    environment = {
+      PROXMOX_HOST = self.triggers.proxmox_host
     }
   }
 

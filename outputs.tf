@@ -1,5 +1,3 @@
-# file: infra/terraform/modules/proxmox/sdn/outputs.tf
-
 output "zone_name" {
   description = "SDN zone name"
   value       = proxmox_virtual_environment_sdn_zone_vlan.zone.id
@@ -16,13 +14,28 @@ output "vnets" {
   }
 }
 
+locals {
+  subnet_config = merge([
+    for vnet_key, vnet in var.vnets : {
+      for subnet_key, subnet in vnet.subnets :
+      "${vnet_key}-${subnet_key}" => subnet
+    }
+  ]...)
+}
+
 output "subnets" {
-  description = "Created subnets with DHCP info"
+  description = "Created subnets with DHCP configuration"
   value = {
-    for k, v in proxmox_virtual_environment_sdn_subnet.subnet : k => {
-      vnet    = v.vnet
-      cidr    = v.cidr
-      gateway = v.gateway
+    for key, subnet in proxmox_virtual_environment_sdn_subnet.subnet : key => {
+      id      = subnet.id
+      vnet    = subnet.vnet
+      cidr    = subnet.cidr
+      gateway = subnet.gateway
+
+      dhcp_enabled     = try(local.subnet_config[key].dhcp_enabled, false)
+      dhcp_range_start = try(local.subnet_config[key].dhcp_range_start, null)
+      dhcp_range_end   = try(local.subnet_config[key].dhcp_range_end, null)
+      dhcp_dns_server  = try(local.subnet_config[key].dhcp_dns_server, null)
     }
   }
 }

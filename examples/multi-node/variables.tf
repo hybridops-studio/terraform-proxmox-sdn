@@ -15,12 +15,24 @@ variable "proxmox_insecure" {
   default     = true
 }
 
-variable "proxmox_node" {
-  description = "Proxmox node name (e.g., pve)"
+variable "proxmox_node1" {
+  description = "Primary Proxmox node name (e.g., pve or hybridhub)"
   type        = string
 }
 
-variable "proxmox_host" {
-  description = "Proxmox host IP for SSH (e.g., 192.168.1.10)"
+variable "proxmox_host_node1" {
+  description = "Primary Proxmox node IP for SSH"
   type        = string
+}
+
+variable "proxmox_node2" {
+  description = "Secondary Proxmox node name (planned / optional)"
+  type        = string
+  default     = ""
+}
+
+variable "proxmox_host_node2" {
+  description = "Secondary Proxmox node IP for SSH (planned / optional)"
+  type        = string
+  default     = ""
 }

@@ -8,22 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Multi-node cluster support
-- Enhanced error handling
+- Multi-node cluster support (single shared SDN zone across nodes)
+- Enhanced error handling and validation around SDN IDs and DHCP
 - NetBox integration example
 
 ## [0.1.1] - 2025-12-13
 
 ### Fixed
 - Corrected `examples/basic` SDN configuration to match the current module inputs.
-- Updated README and example documentation for clarity and consistency.
+- Updated all example VNets and zone IDs to comply with Proxmox SDN ID rules (≤ 8 chars, no dashes).
+- Ensured `no-dhcp` example correctly disables DHCP while still provisioning SDN objects.
+
+### Changed
+- Improved README usage examples and examples documentation for clarity and consistency.
+- Documented known SDN behaviours and workarounds (e.g. VNet interface persistence after destroy).
+
+### Added
+- Optional DHCP cleanup on destroy via `cleanup-dhcp.sh` (removes module-generated dnsmasq config).
 
 ## [0.1.0] - 2025-12-13
 
 ### Added
-- Initial release
-- VLAN-based SDN zone management
-- VNet and subnet provisioning
-- Automated dnsmasq DHCP configuration
-- Gateway IP assignment on VNet bridges
-- Examples: basic, homelab-six-vlans, no-dhcp, multi-node
+- Initial release.
+- VLAN-based SDN zone management.
+- VNet and subnet provisioning.
+- Automated dnsmasq DHCP configuration.
+- Gateway IP assignment on VNet bridges.
+- Examples: `basic`, `homelab-six-vlans`, `no-dhcp`, `multi-node` (single-node usage today, multi-node planned).
