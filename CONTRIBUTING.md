@@ -6,28 +6,28 @@ Thank you for considering contributing to this project.
 
 ## How to Contribute
 
-1. Fork the repository.
-2. Create a feature branch:
+1.Fork the repository.
+2.Create a feature branch:
 
    ```bash
    git checkout -b feature/descriptive-name
    ```
 
-3. Make your changes following the code standards below.
-4. Test with `terraform fmt`, `terraform validate`, and (where possible) an actual deployment.
-5. Commit your changes:
+3.Make your changes following the code standards below.
+4.Test with `terraform fmt`, `terraform validate`, and (where possible) an actual deployment.
+5.Commit your changes:
 
    ```bash
    git commit -m "Add descriptive message"
    ```
 
-6. Push your branch:
+6.Push your branch:
 
    ```bash
    git push origin feature/descriptive-name
    ```
 
-7. Open a Pull Request (PR) against the `main` branch.
+7.Open a Pull Request (PR) against the `main` branch.
 
 ---
 

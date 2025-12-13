@@ -1,6 +1,6 @@
 # terraform-proxmox-sdn
 
-Terraform module for managing Proxmox SDN (Software-Defined Networking) with automated DHCP configuration via dnsmasq. 
+Terraform module for managing Proxmox SDN (Software-Defined Networking) with automated DHCP configuration via dnsmasq.
 
 Designed for Proxmox VE 8.x environments requiring repeatable, version-controlled network segmentation.
 
@@ -183,14 +183,14 @@ Complete examples available in `examples/`:
 
 ## DHCP Configuration
 
-The module executes `scripts/setup-dhcp.sh` via SSH to configure dnsmasq on the Proxmox node.  The script:
+The module executes `scripts/setup-dhcp.sh` via SSH to configure dnsmasq on the Proxmox node.The script:
 
-1. Installs dnsmasq if not present
-2. Configures IP addresses on VNet bridge interfaces
-3. Generates DHCP ranges for enabled subnets
-4. Reloads SDN configuration
+1.Installs dnsmasq if not present
+2.Configures IP addresses on VNet bridge interfaces
+3.Generates DHCP ranges for enabled subnets
+4.Reloads SDN configuration
 
-Manual DHCP configuration can be used by omitting the `null_resource. dhcp_setup` block.
+Manual DHCP configuration can be used by omitting the `null_resource.dhcp_setup` block.
 
 ---
 
@@ -210,6 +210,6 @@ MIT-0 (MIT No Attribution)
 
 ## Contributing
 
-Contributions welcome.  Submit issues or pull requests via GitHub.
+Contributions welcome.Submit issues or pull requests via GitHub.
 
 Repository: https://github.com/hybridops-studio/terraform-proxmox-sdn

@@ -15,7 +15,7 @@ provider "proxmox" {
   insecure  = var.proxmox_insecure
 }
 
-# # NOTE: Current module version supports single node. 
+# # NOTE: Current module version supports single node.
 # # This example shows planned multi-node usage (future enhancement)
 
 # module "sdn_node1" {
@@ -54,5 +54,5 @@ provider "proxmox" {
 #   proxmox_node = "pve2"
 #   proxmox_host = var.proxmox_host_node2
 #
-#   vnets = { ... }
+#   vnets = { ...}
 # }

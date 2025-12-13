@@ -15,21 +15,21 @@ Each example demonstrates a specific use case for the `terraform-proxmox-sdn` mo
 
 ## Usage
 
-1. Navigate to an example directory, for example:
+1.Navigate to an example directory, for example:
 
    ```bash
    cd examples/basic
    ```
 
-2. Copy the example variables file:
+2.Copy the example variables file:
 
    ```bash
    cp terraform.tfvars.example terraform.tfvars
    ```
 
-3. Edit `terraform.tfvars` with your Proxmox credentials and desired settings.
+3.Edit `terraform.tfvars` with your Proxmox credentials and desired settings.
 
-4. Initialize and apply Terraform:
+4.Initialize and apply Terraform:
 
    ```bash
    terraform init
@@ -57,11 +57,11 @@ proxmox_host     = "PROXMOX-IP"
 
 ## Creating an API Token
 
-1. Log in to the Proxmox web interface.
-2. Navigate to **Datacenter → Permissions → API Tokens**.
-3. Click **Add** and create a token for the desired user.
-4. Copy both the **token ID** and **secret**.
-5. Combine them in the format expected by the examples, for example:
+1.Log in to the Proxmox web interface.
+2.Navigate to **Datacenter → Permissions → API Tokens**.
+3.Click **Add** and create a token for the desired user.
+4.Copy both the **token ID** and **secret**.
+5.Combine them in the format expected by the examples, for example:
 
    ```text
    root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx

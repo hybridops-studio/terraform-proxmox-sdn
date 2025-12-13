@@ -2,10 +2,10 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
-! *. tfvars.example
+! *.tfvars.example
 *.tfvars.json
 .terraform/
-. terraform.lock.hcl
+.terraform.lock.hcl
 crash.log
 crash.*.log
 override.tf
@@ -14,15 +14,15 @@ override.tf.json
 *_override.tf.json
 
 # Examples
-examples/**/terraform. tfvars
+examples/**/terraform.tfvars
 examples/**/.terraform/
-examples/**/.terraform. lock.hcl
+examples/**/.terraform.lock.hcl
 examples/**/*.tfstate*
 
 # IDE
 .vscode/
 .idea/
-*. swp
+*.swp
 *.swo
 *~
 
@@ -31,6 +31,6 @@ examples/**/*.tfstate*
 Thumbs.db
 
 # Sensitive
-*. pem
-*. key
+*.pem
+*.key
 id_rsa*
