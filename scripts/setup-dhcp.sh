@@ -48,7 +48,7 @@ while IFS='|' read -r vnet gateway start end dns; do
 interface=${vnet}
 dhcp-range=${start},${end},24h
 dhcp-option=option:router,${gateway}
-dhcp-option=option: dns-server,${dns}
+dhcp-option=option:dns-server,${dns}
 "
 done <<< "$VNET_CONFIGS"
 
