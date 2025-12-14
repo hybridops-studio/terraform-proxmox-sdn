@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST="${PROXMOX_HOST: ? PROXMOX_HOST is required}"
+HOST="${PROXMOX_HOST:?PROXMOX_HOST is required}"
 
 ssh -o StrictHostKeyChecking=no "root@${HOST}" << 'REMOTE'
 systemctl stop dnsmasq 2>/dev/null || true
