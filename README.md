@@ -1,5 +1,7 @@
 # terraform-proxmox-sdn
 
+[![Terraform Registry](https://img.shields.io/badge/terraform_registry-hybridops--studio%2Fsdn%2Fproxmox-623CE4.svg)](https://registry.terraform.io/modules/hybridops-studio/sdn/proxmox)
+
 Terraform module for managing **Proxmox SDN** (Software-Defined Networking) with automated **DHCP via dnsmasq**.
 
 It creates a VLAN-backed SDN zone, VNets, and subnets on **Proxmox VE 8.x**, and can configure dnsmasq on the Proxmox node to provide per-subnet DHCP pools. Suitable for both **homelabs** and small **production-style** environments.
