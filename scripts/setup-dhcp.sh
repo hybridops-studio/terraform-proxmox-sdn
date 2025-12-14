@@ -149,8 +149,6 @@ for vnet in vnetmgmt vnetobs vnetdev vnetstag vnetprod vnetlab; do
     fi
 done
 
-ifreload -a
-
 REMOTE_SCRIPT
 
 echo ""
