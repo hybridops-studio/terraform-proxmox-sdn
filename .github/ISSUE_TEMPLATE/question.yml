@@ -1,0 +1,40 @@
+name: Usage question or compatibility check
+description: Ask a focused question about usage, examples, compatibility, or safe adoption.
+title: "[question] "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for focused questions. Do not paste API tokens, SSH keys, private IP plans, or unredacted Terraform output.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - First example or quickstart
+        - Proxmox VE or provider compatibility
+        - Host-routed versus edge-routed mode
+        - Brownfield adoption
+        - DHCP, NAT, or static routes
+        - Registry or Git source usage
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Ask the specific thing you need clarified.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include versions, example path, or planned usage if known. Say if this is based on docs review rather than a live run.
+  - type: textarea
+    id: checked
+    attributes:
+      label: What you checked
+      description: Link the README section, example, issue, or command you already reviewed.

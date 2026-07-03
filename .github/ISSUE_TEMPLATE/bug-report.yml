@@ -1,0 +1,61 @@
+name: Terraform module defect
+description: Report a reproducible problem with the Proxmox SDN module.
+title: "[bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API tokens, SSH keys, private addresses, customer data, or unredacted Terraform output.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Terraform validation or plan
+        - Proxmox SDN objects
+        - Host L3, NAT, or routing
+        - DHCP or dnsmasq
+        - Examples
+        - Documentation
+    validations:
+      required: true
+  - type: input
+    id: reference
+    attributes:
+      label: Relevant reference
+      description: Module version, example path, input, output, or script involved.
+      placeholder: v0.1.5, examples/basic, host_reconcile_nonce, enable_dhcp
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behaviour
+      description: Include the exact error or result, with sensitive data removed.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run terraform init -backend=false
+        2. Run terraform plan ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Terraform version, Proxmox VE version, provider version, module version or commit, and whether this was validate-only, plan-only, or live apply.
+    validations:
+      required: true
