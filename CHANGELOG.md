@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Optional `proxmox_nodes` input for assigning one SDN zone and its VNets to
+  several Proxmox cluster nodes. Multi-node membership is edge-routed; host-side
+  L3, SNAT, DHCP, and static routes remain single-host features.
 - `host_static_routes` input for host-routed Proxmox SDN deployments that need
   selected upstream or cloud prefixes routed through a separate on-prem edge.
 
