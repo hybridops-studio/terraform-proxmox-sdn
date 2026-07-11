@@ -49,6 +49,9 @@ jobs:
       - name: Validate module
         run: terraform validate -no-color
 
+      - name: Test module
+        run: terraform test -no-color
+
   validate-examples:
     name: validate example (${{ matrix.name }})
     runs-on: ubuntu-latest
