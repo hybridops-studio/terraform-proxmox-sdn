@@ -13,8 +13,27 @@ variable "zone_bridge" {
 }
 
 variable "proxmox_node" {
-  description = "Proxmox node name for SDN zone attachment."
+  description = "Legacy single Proxmox node name for SDN zone attachment. Used when proxmox_nodes is empty."
   type        = string
+  default     = ""
+}
+
+variable "proxmox_nodes" {
+  description = "Optional Proxmox node names for cluster-wide SDN zone membership. Takes precedence over proxmox_node when set."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for node in var.proxmox_nodes : trimspace(node) != ""])
+    error_message = "proxmox_nodes must not contain empty node names."
+  }
+
+  validation {
+    condition = length(var.proxmox_nodes) == length(distinct([
+      for node in var.proxmox_nodes : trimspace(node)
+    ]))
+    error_message = "proxmox_nodes must not contain duplicate node names."
+  }
 }
 
 variable "proxmox_host" {
