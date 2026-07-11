@@ -11,7 +11,7 @@ Each example directory also includes its own `README.md` so the Terraform Regist
 | `basic` | Single VNet with DHCP (minimal configuration). |
 | `homelab-six-vlans` | Six VLAN reference layout for segmented environments. |
 | `no-dhcp` | Static IP networking without DHCP. |
-| `multi-node` | Multi-node pattern (planned). |
+| `multi-node` | Shared edge-routed SDN zone across several Proxmox cluster nodes. |
 
 ## Run an example
 
