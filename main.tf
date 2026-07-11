@@ -2,6 +2,10 @@
 # maintainer: HybridOps
 
 locals {
+  proxmox_nodes_effective = length(var.proxmox_nodes) > 0 ? [
+    for node in var.proxmox_nodes : trimspace(node)
+  ] : compact([trimspace(var.proxmox_node)])
+
   subnets_flat = merge([
     for vnet_key, vnet in var.vnets : {
       for subnet_key, subnet in vnet.subnets :
@@ -39,7 +43,7 @@ locals {
   sdn_reload_hash = sha1(jsonencode({
     zone_name        = var.zone_name
     zone_bridge      = var.zone_bridge
-    proxmox_node     = var.proxmox_node
+    proxmox_nodes    = local.proxmox_nodes_effective
     enable_host_l3   = var.enable_host_l3
     enable_snat      = var.enable_snat
     uplink_interface = var.uplink_interface
@@ -74,8 +78,20 @@ locals {
 resource "proxmox_virtual_environment_sdn_zone_vlan" "zone" {
   id     = var.zone_name
   bridge = var.zone_bridge
-  nodes  = [var.proxmox_node]
+  nodes  = local.proxmox_nodes_effective
   mtu    = 1500
+
+  lifecycle {
+    precondition {
+      condition     = length(local.proxmox_nodes_effective) > 0
+      error_message = "Set proxmox_node or provide at least one entry in proxmox_nodes."
+    }
+
+    precondition {
+      condition     = length(local.proxmox_nodes_effective) <= 1 || !var.enable_host_l3
+      error_message = "Cluster-wide proxmox_nodes membership currently requires enable_host_l3 = false; host L3, SNAT, DHCP, and static routes remain single-host features."
+    }
+  }
 
   depends_on = [null_resource.sdn_apply_finalizer]
 }
