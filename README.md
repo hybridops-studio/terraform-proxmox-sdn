@@ -141,6 +141,7 @@ hybridops-platform/infra/terraform/live-v1/onprem/proxmox/core/00-foundation/net
 ## Features
 
 - Creates a VLAN-backed **SDN zone** on a Proxmox bridge.
+- Supports one zone across several Proxmox nodes through optional `proxmox_nodes` membership.
 - Manages **VNets** and **subnets** via a single `vnets` map.
 - Optional **host L3**: assigns gateway IPs on VNet bridge interfaces.
 - Optional **SNAT**: per-subnet masquerade to an uplink interface.
@@ -179,7 +180,8 @@ Typical reference layout (six VLANs):
 |----------------|--------|----------|-------------|
 | `zone_name`    | string | yes      | SDN zone ID (≤ 8 chars, lowercase, no dashes – Proxmox SDN rules). |
 | `zone_bridge`  | string | no       | Proxmox bridge to attach the SDN zone to (default: `vmbr0`). |
-| `proxmox_node` | string | yes      | Proxmox node name (for example `pve` or `hybridhub`). |
+| `proxmox_node` | string | yes, unless `proxmox_nodes` is set | Legacy single Proxmox node name (for example `pve` or `hybridhub`). |
+| `proxmox_nodes` | list(string) | no | Cluster node names for shared SDN zone membership. Takes precedence over `proxmox_node`. |
 | `proxmox_host` | string | yes      | Proxmox host (IP or DNS) used over SSH for host-side scripts. |
 | `vnets`        | map    | yes      | Map of VNets and subnets (see structure below). |
 
@@ -199,6 +201,8 @@ Typical reference layout (six VLANs):
 > The module enforces that `enable_dhcp = true` requires `enable_host_l3 = true`, so dnsmasq can bind to VNet interfaces safely.
 >
 > `host_static_routes` also requires `enable_host_l3 = true`, because the Proxmox host must be the effective gateway for guests before these routes can influence downstream traffic.
+>
+> A `proxmox_nodes` list containing more than one node requires `enable_host_l3 = false`. Cluster-wide membership is currently edge-routed; host L3, SNAT, DHCP, and static routes remain single-host features.
 
 ### Recovery / self-heal (host-side drift)
 
@@ -385,6 +389,28 @@ and routing/DHCP are delegated to the actual edge or network services layer.
 Recommended production posture:
 - let **VyOS or the edge tier** own north-south routing and egress
 - keep Proxmox SDN focused on segmentation unless you explicitly want host-routed subnets
+
+### Cluster-wide zone membership
+
+Use `proxmox_nodes` when the same SDN zone and VNets must be available across a
+Proxmox cluster:
+
+```hcl
+proxmox_nodes = ["pve1", "pve2", "pve3"]
+proxmox_host  = "192.0.2.10"
+
+enable_host_l3 = false
+enable_snat    = false
+enable_dhcp    = false
+```
+
+When `proxmox_nodes` is empty, the module retains the existing
+`proxmox_node` behaviour. When it is set, the list takes precedence. Multi-node
+membership changes only the SDN zone's `nodes` property; it does not distribute
+SSH-based host configuration across the cluster.
+
+See [`examples/multi-node`](examples/multi-node) for a complete edge-routed
+cluster example.
 
 ## Brownfield adoption
 
