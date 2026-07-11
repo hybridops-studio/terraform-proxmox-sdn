@@ -15,24 +15,12 @@ variable "proxmox_insecure" {
   default     = true
 }
 
-variable "proxmox_node1" {
-  description = "Primary Proxmox node name (e.g., pve or hybridhub)"
-  type        = string
+variable "proxmox_nodes" {
+  description = "Proxmox node names that should share the SDN zone"
+  type        = list(string)
 }
 
-variable "proxmox_host_node1" {
-  description = "Primary Proxmox node IP for SSH"
+variable "proxmox_host" {
+  description = "One Proxmox cluster node used for SSH-based SDN apply and status operations"
   type        = string
-}
-
-variable "proxmox_node2" {
-  description = "Secondary Proxmox node name (planned / optional)"
-  type        = string
-  default     = ""
-}
-
-variable "proxmox_host_node2" {
-  description = "Secondary Proxmox node IP for SSH (planned / optional)"
-  type        = string
-  default     = ""
 }

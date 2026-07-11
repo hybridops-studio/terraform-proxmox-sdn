@@ -1,22 +1,27 @@
 # Multi-Node Example
 
-Current single-node implementation shaped around a future Proxmox cluster SDN pattern.
-
-The active configuration manages node 1 only. The commented node 2 block documents the intended direction for a later multi-node module release.
+Assign one Proxmox SDN zone and its VNets to several cluster nodes while routing
+and DHCP remain in a separate edge or network-services layer.
 
 ## What it creates
 
-- SDN zone `clust01` on bridge `vmbr0`.
+- SDN zone `clust01` on bridge `vmbr0` across the names in `proxmox_nodes`.
 - VNet `vclst01m` using VLAN ID `200`.
-- Subnet `10.200.0.0/24` with gateway `10.200.0.1`.
-- DHCP range `10.200.0.120` through `10.200.0.220`.
-- SNAT through uplink interface `vmbr0`.
+- Subnet `10.200.0.0/24` with the edge-owned gateway `10.200.0.1`.
+
+The module does not configure host L3, SNAT, DHCP, or static routes in this
+example. Those features still target one `proxmox_host` and are not supported
+with a multi-node membership list.
+
+`proxmox_host` selects one reachable cluster node for SSH-based SDN apply and
+status operations. It does not make that node the gateway.
 
 ## Usage
 
 ```bash
 cp terraform.tfvars.example terraform.tfvars
-terraform init
+terraform init -backend=false
+terraform validate
 terraform plan
 terraform apply
 ```
@@ -27,14 +32,9 @@ Edit `terraform.tfvars` before running `terraform plan`.
 
 - `proxmox_url`
 - `proxmox_token`
-- `proxmox_node1`
-- `proxmox_host_node1`
-
-## Optional Variables
-
-- `proxmox_node2`: Placeholder for the planned secondary node example.
-- `proxmox_host_node2`: Placeholder for the planned secondary node SSH host.
+- `proxmox_nodes`
+- `proxmox_host`
 
 ## Outputs
 
-- `sdn_nodes`: Aggregated SDN outputs for the active node configuration.
+- `sdn_cluster`: Zone, VNet, and subnet values for the shared cluster SDN.
