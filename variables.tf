@@ -4,6 +4,11 @@
 variable "zone_name" {
   description = "SDN zone name."
   type        = string
+
+  validation {
+      condition     = can(regex("^[a-zA-Z0-9]{1,8}$", var.zone_name))
+      error_message = "zone_name must be alphanumeric and at most 8 characters (Proxmox SDN zone ID constraint)."
+    }
 }
 
 variable "zone_bridge" {
@@ -99,8 +104,10 @@ variable "vnets" {
   description = <<-EOT
     SDN VNets map keyed by VNet ID.
 
+    VNet keys: <= 8 chars, no dashes (e.g. vnet1, vnetA, vnet_main)
+
     Each VNet:
-      - vlan_id: VLAN tag (e.g. 10, 20, 30)
+      - vlan_id: VLAN tag (e.g. 10, 20, 30 )
       - description: logical description
       - subnets: map keyed by subnet ID (e.g. submgmt, subdev)
 
@@ -132,6 +139,20 @@ variable "vnets" {
       dhcp_dns_server  = optional(string)
     }))
   }))
+
+  validation {
+    condition = alltrue([for k in keys(var.vnets) : can(regex("^[a-zA-Z0-9]{1,8}$", k))])
+    error_message = "Each VNet ID must be alphanumeric and at most 8 characters."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for vnet_k, vnet in var.vnets : [
+        for subnet_k in keys(vnet.subnets) : can(regex("^[a-zA-Z0-9]{1,8}$", subnet_k))
+      ]
+    ]))
+    error_message = "Each subnet ID must be alphanumeric and at most 8 characters."
+  }
 }
 
 variable "proxmox_url" {
