@@ -107,7 +107,7 @@ variable "vnets" {
     VNet keys: <= 8 chars, no dashes (e.g. vnet1, vnetA, vnetmgmt)
 
     Each VNet:
-      - vlan_id: VLAN tag (e.g. 10, 20, 30 )
+      - vlan_id: VLAN tag (e.g. 10, 20, 30)
       - description: logical description
       - subnets: map keyed by subnet ID (e.g. submgmt, subdev)
 
