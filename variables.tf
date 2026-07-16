@@ -104,7 +104,7 @@ variable "vnets" {
   description = <<-EOT
     SDN VNets map keyed by VNet ID.
 
-    VNet keys: <= 8 chars, no dashes (e.g. vnet1, vnetA, vnet_main)
+    VNet keys: <= 8 chars, no dashes (e.g. vnet1, vnetA, vnetmgmt)
 
     Each VNet:
       - vlan_id: VLAN tag (e.g. 10, 20, 30 )
