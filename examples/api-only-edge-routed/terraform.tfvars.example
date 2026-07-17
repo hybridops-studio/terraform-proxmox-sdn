@@ -1,0 +1,10 @@
+# file: examples/api-only-edge-routed/terraform.tfvars.example
+# purpose: Example inputs for a fresh edge-routed SDN deployment without host login
+
+# Proxmox API configuration
+proxmox_url      = "https://<PROXMOX-IP>:8006/api2/json"
+proxmox_token    = "user@pam!terraform=<YOUR-API-TOKEN-SECRET>"
+proxmox_insecure = true
+
+# SDN zone membership
+proxmox_node = "<PROXMOX-NODE-NAME>"

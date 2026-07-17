@@ -2,6 +2,11 @@
 # maintainer: HybridOps
 
 locals {
+  host_orchestration_enabled = var.enable_host_orchestration
+  host_l3_enabled            = var.enable_host_orchestration && var.enable_host_l3
+  snat_enabled               = var.enable_host_orchestration && var.enable_host_l3 && var.enable_snat
+  dhcp_enabled               = var.enable_host_orchestration && var.enable_host_l3 && var.enable_dhcp
+
   proxmox_nodes_effective = length(var.proxmox_nodes) > 0 ? [
     for node in var.proxmox_nodes : trimspace(node)
   ] : compact([trimspace(var.proxmox_node)])
@@ -13,24 +18,24 @@ locals {
         vnet_id = vnet_key
 
         dhcp_enabled_effective = (
-          var.enable_host_l3 && var.enable_dhcp &&
+          local.dhcp_enabled &&
           try(subnet.dhcp_enabled, true) != false
         )
 
         dhcp_range_start_effective = (
-          (var.enable_host_l3 && var.enable_dhcp && try(subnet.dhcp_enabled, true) != false)
+          (local.dhcp_enabled && try(subnet.dhcp_enabled, true) != false)
           ? coalesce(try(subnet.dhcp_range_start, null), cidrhost(subnet.cidr, var.dhcp_default_start_host))
           : null
         )
 
         dhcp_range_end_effective = (
-          (var.enable_host_l3 && var.enable_dhcp && try(subnet.dhcp_enabled, true) != false)
+          (local.dhcp_enabled && try(subnet.dhcp_enabled, true) != false)
           ? coalesce(try(subnet.dhcp_range_end, null), cidrhost(subnet.cidr, var.dhcp_default_end_host))
           : null
         )
 
         dhcp_dns_server_effective = (
-          (var.enable_host_l3 && var.enable_dhcp && try(subnet.dhcp_enabled, true) != false)
+          (local.dhcp_enabled && try(subnet.dhcp_enabled, true) != false)
           ? coalesce(try(subnet.dhcp_dns_server, null), var.dhcp_default_dns_server)
           : null
         )
@@ -41,15 +46,16 @@ locals {
   vnet_list = join(" ", keys(var.vnets))
 
   sdn_reload_hash = sha1(jsonencode({
-    zone_name        = var.zone_name
-    zone_bridge      = var.zone_bridge
-    proxmox_nodes    = local.proxmox_nodes_effective
-    enable_host_l3   = var.enable_host_l3
-    enable_snat      = var.enable_snat
-    uplink_interface = var.uplink_interface
-    enable_dhcp      = var.enable_dhcp
-    dns_domain       = var.dns_domain
-    dns_lease        = var.dns_lease
+    zone_name                 = var.zone_name
+    zone_bridge               = var.zone_bridge
+    proxmox_nodes             = local.proxmox_nodes_effective
+    enable_host_orchestration = var.enable_host_orchestration
+    enable_host_l3            = var.enable_host_l3
+    enable_snat               = var.enable_snat
+    uplink_interface          = var.uplink_interface
+    enable_dhcp               = var.enable_dhcp
+    dns_domain                = var.dns_domain
+    dns_lease                 = var.dns_lease
     # Explicit operator-controlled nonce to force host-side reconciliation
     # (gateway/NAT/DHCP) even when topology inputs are otherwise unchanged.
     host_reconcile_nonce = var.host_reconcile_nonce
@@ -69,7 +75,7 @@ locals {
     }
   }
 
-  dhcp_subnets = (var.enable_host_l3 && var.enable_dhcp) ? {
+  dhcp_subnets = local.dhcp_enabled ? {
     for key, s in local.subnets_flat : key => s
     if s.dhcp_enabled_effective
   } : {}
@@ -90,6 +96,21 @@ resource "proxmox_virtual_environment_sdn_zone_vlan" "zone" {
     precondition {
       condition     = length(local.proxmox_nodes_effective) <= 1 || !var.enable_host_l3
       error_message = "Cluster-wide proxmox_nodes membership currently requires enable_host_l3 = false; host L3, SNAT, DHCP, and static routes remain single-host features."
+    }
+
+    precondition {
+      condition     = !var.enable_host_orchestration || trimspace(var.proxmox_host) != ""
+      error_message = "Set proxmox_host when enable_host_orchestration = true."
+    }
+
+    precondition {
+      condition = var.enable_host_orchestration || (
+        !var.enable_host_l3 &&
+        !var.enable_snat &&
+        !var.enable_dhcp &&
+        length(var.host_static_routes) == 0
+      )
+      error_message = "When enable_host_orchestration = false, disable enable_host_l3, enable_snat, enable_dhcp, and host_static_routes."
     }
   }
 
@@ -132,7 +153,7 @@ resource "proxmox_virtual_environment_sdn_applier" "apply" {
 }
 
 resource "null_resource" "gateway_setup" {
-  for_each = var.enable_host_l3 ? local.subnets_flat : {}
+  for_each = local.host_l3_enabled ? local.subnets_flat : {}
 
   triggers = {
     zone_name    = var.zone_name
@@ -179,15 +200,18 @@ resource "null_resource" "gateway_setup" {
 
 resource "null_resource" "gateway_cleanup" {
   triggers = {
-    count        = var.enable_host_l3 ? 1 : 0
-    zone_name    = var.zone_name
-    proxmox_host = var.proxmox_host
-    vnets_hash   = md5(jsonencode(var.vnets))
+    host_l3_enabled = tostring(local.host_l3_enabled)
+    zone_name       = var.zone_name
+    proxmox_host    = var.proxmox_host
+    vnets_hash      = md5(jsonencode(var.vnets))
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
+      if [ "${self.triggers.host_l3_enabled}" != "true" ]; then
+        exit 0
+      fi
       scp ${path.module}/scripts/cleanup/cleanup-gateway.sh root@${self.triggers.proxmox_host}:/tmp/cleanup-gateway.sh
       ssh root@${self.triggers.proxmox_host} 'chmod +x /tmp/cleanup-gateway.sh && /tmp/cleanup-gateway.sh \
         zone \
@@ -202,7 +226,7 @@ resource "null_resource" "gateway_cleanup" {
 }
 
 resource "null_resource" "host_route_setup" {
-  for_each = var.enable_host_l3 ? local.host_static_routes : {}
+  for_each = local.host_l3_enabled ? local.host_static_routes : {}
 
   triggers = {
     zone_name           = var.zone_name
@@ -244,15 +268,18 @@ resource "null_resource" "host_route_setup" {
 
 resource "null_resource" "host_route_cleanup" {
   triggers = {
-    count        = (var.enable_host_l3 && length(var.host_static_routes) > 0) ? 1 : 0
-    zone_name    = var.zone_name
-    proxmox_host = var.proxmox_host
-    routes_hash  = sha1(jsonencode(var.host_static_routes))
+    host_routes_enabled = tostring(local.host_l3_enabled && length(var.host_static_routes) > 0)
+    zone_name           = var.zone_name
+    proxmox_host        = var.proxmox_host
+    routes_hash         = sha1(jsonencode(var.host_static_routes))
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
+      if [ "${self.triggers.host_routes_enabled}" != "true" ]; then
+        exit 0
+      fi
       scp ${path.module}/scripts/cleanup/cleanup-static-route.sh root@${self.triggers.proxmox_host}:/tmp/cleanup-static-route.sh
       ssh root@${self.triggers.proxmox_host} 'chmod +x /tmp/cleanup-static-route.sh && /tmp/cleanup-static-route.sh \
         zone \
@@ -267,7 +294,7 @@ resource "null_resource" "host_route_cleanup" {
 }
 
 resource "null_resource" "nat_setup" {
-  for_each = (var.enable_host_l3 && var.enable_snat) ? {
+  for_each = local.snat_enabled ? {
     for k, s in local.subnets_flat : k => s
   } : {}
 
@@ -315,7 +342,7 @@ resource "null_resource" "nat_setup" {
 
 resource "null_resource" "nat_cleanup" {
   triggers = {
-    count        = (var.enable_host_l3 && var.enable_snat) ? 1 : 0
+    snat_enabled = tostring(local.snat_enabled)
     zone_name    = var.zone_name
     proxmox_host = var.proxmox_host
     vnets_hash   = md5(jsonencode(var.vnets))
@@ -324,6 +351,9 @@ resource "null_resource" "nat_cleanup" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
+      if [ "${self.triggers.snat_enabled}" != "true" ]; then
+        exit 0
+      fi
       scp ${path.module}/scripts/cleanup/cleanup-nat.sh root@${self.triggers.proxmox_host}:/tmp/cleanup-nat.sh
       ssh root@${self.triggers.proxmox_host} 'chmod +x /tmp/cleanup-nat.sh && /tmp/cleanup-nat.sh \
         zone \
@@ -393,7 +423,7 @@ resource "null_resource" "dhcp_setup" {
 
 resource "null_resource" "dhcp_cleanup" {
   triggers = {
-    count        = (var.enable_host_l3 && var.enable_dhcp) ? 1 : 0
+    dhcp_enabled = tostring(local.dhcp_enabled)
     zone_name    = var.zone_name
     proxmox_host = var.proxmox_host
     vnets_hash   = md5(jsonencode(var.vnets))
@@ -402,6 +432,9 @@ resource "null_resource" "dhcp_cleanup" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
+      if [ "${self.triggers.dhcp_enabled}" != "true" ]; then
+        exit 0
+      fi
       scp ${path.module}/scripts/cleanup/cleanup-dhcp.sh root@${self.triggers.proxmox_host}:/tmp/cleanup-dhcp.sh
       ssh root@${self.triggers.proxmox_host} 'chmod +x /tmp/cleanup-dhcp.sh && /tmp/cleanup-dhcp.sh \
         zone \
@@ -417,14 +450,20 @@ resource "null_resource" "dhcp_cleanup" {
 
 resource "null_resource" "sdn_reload" {
   triggers = {
-    proxmox_host = var.proxmox_host
-    config_hash  = local.sdn_reload_hash
-    vnet_list    = local.vnet_list
+    host_orchestration_enabled = tostring(local.host_orchestration_enabled)
+    proxmox_host               = var.proxmox_host
+    config_hash                = local.sdn_reload_hash
+    vnet_list                  = local.vnet_list
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       # Terraform local-exec uses /bin/sh by default; keep this POSIX-sh safe.
+      if [ "${self.triggers.host_orchestration_enabled}" != "true" ]; then
+        echo "Host orchestration disabled; skipping host SDN reload."
+        exit 0
+      fi
+
       ssh -o StrictHostKeyChecking=no root@${self.triggers.proxmox_host} 'set -eu
 
         echo "Applying SDN configuration via /cluster/sdn..."
@@ -468,9 +507,10 @@ resource "null_resource" "sdn_reload" {
 
 resource "null_resource" "sdn_auto_healing" {
   triggers = {
-    proxmox_host    = var.proxmox_host
-    sdn_reload_hash = local.sdn_reload_hash
-    installer_hash  = filemd5("${path.module}/scripts/setup/install-sdn-auto-healing.sh")
+    host_orchestration_enabled = tostring(local.host_orchestration_enabled)
+    proxmox_host               = var.proxmox_host
+    sdn_reload_hash            = local.sdn_reload_hash
+    installer_hash             = filemd5("${path.module}/scripts/setup/install-sdn-auto-healing.sh")
     gateway_state_hash = sha1(jsonencode({
       for key, subnet in local.subnets_flat : key => {
         vnet_id = subnet.vnet_id
@@ -483,6 +523,11 @@ resource "null_resource" "sdn_auto_healing" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      if [ "${self.triggers.host_orchestration_enabled}" != "true" ]; then
+        echo "Host orchestration disabled; skipping host recovery setup."
+        exit 0
+      fi
+
       scp ${path.module}/scripts/setup/install-sdn-auto-healing.sh root@${self.triggers.proxmox_host}:/tmp/install-sdn-auto-healing.sh
       ssh root@${self.triggers.proxmox_host} 'chmod +x /tmp/install-sdn-auto-healing.sh && /tmp/install-sdn-auto-healing.sh'
     EOT
@@ -491,6 +536,10 @@ resource "null_resource" "sdn_auto_healing" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
+      if [ "${self.triggers.host_orchestration_enabled}" != "true" ]; then
+        exit 0
+      fi
+
       ssh root@${self.triggers.proxmox_host} 'set -eu
         systemctl disable --now sdn-config-watcher.path >/dev/null 2>&1 || true
         systemctl disable --now sdn-status-fix.service >/dev/null 2>&1 || true
@@ -511,12 +560,17 @@ resource "null_resource" "sdn_auto_healing" {
 
 resource "null_resource" "sdn_apply_finalizer" {
   triggers = {
-    proxmox_host = var.proxmox_host
+    host_orchestration_enabled = tostring(local.host_orchestration_enabled)
+    proxmox_host               = var.proxmox_host
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
+      if [ "${self.triggers.host_orchestration_enabled}" != "true" ]; then
+        exit 0
+      fi
+
       ssh root@${self.triggers.proxmox_host} 'set -u; \
         if pvesh ls /cluster/sdn >/dev/null 2>&1; then \
           if pvesh set /cluster/sdn >/dev/null 2>&1; then exit 0; fi; \

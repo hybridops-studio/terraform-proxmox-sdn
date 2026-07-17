@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `enable_host_orchestration` input for fresh edge-routed deployments that
+  manage Proxmox SDN objects without Proxmox host login.
+- `api-only-edge-routed` example for creating a fresh SDN zone, VNet, and subnet
+  where routing, DHCP, firewall policy, and upstream connectivity are owned by a
+  separate network layer.
 - Optional `proxmox_nodes` input for assigning one SDN zone and its VNets to
   several Proxmox cluster nodes. Multi-node membership is edge-routed; host-side
   L3, SNAT, DHCP, and static routes remain single-host features.

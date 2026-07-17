@@ -12,12 +12,13 @@ It creates a VLAN-backed SDN zone, VNets, and subnets on **Proxmox VE 8.x** and 
 - Configure **gateway IPs** on VNet bridge interfaces (host L3).
 - Add **SNAT / masquerade** rules per subnet.
 - Provision **dnsmasq DHCP** pools per subnet.
+- Run fresh **edge-routed** deployments without Proxmox host login.
 - Emit a **NetBox-ready IPAM export payload** (prefixes + DHCP metadata).
 
 The two practical operating modes are:
 
 - **Host-routed**: Proxmox owns the gateway IPs, NAT, and optional DHCP. Good for bootstrap, evaluation, and smaller sites.
-- **Edge-routed**: Proxmox SDN provides segmentation, while a real edge appliance such as VyOS owns routing and DHCP.
+- **Edge-routed**: Proxmox SDN provides segmentation, while a separate routing layer owns gateways, DHCP, firewall policy, and upstream routing. Fresh edge-routed deployments can disable host login.
 
 > **Module Source**
 >
@@ -119,6 +120,46 @@ proxmox_node = "<PROXMOX-NODE-NAME>"
 proxmox_host = "<PROXMOX-IP>"
 ```
 
+### Fresh edge-routed example without host login
+
+For a fresh deployment where the Proxmox host does not own gateways, NAT, DHCP,
+or static routes, disable host orchestration:
+
+```hcl
+module "sdn" {
+  source  = "hybridops-tech/sdn/proxmox"
+  version = "~> 0.1.5"
+
+  zone_name    = "apionly"
+  proxmox_node = var.proxmox_node
+
+  enable_host_orchestration = false
+  enable_host_l3            = false
+  enable_snat               = false
+  enable_dhcp               = false
+
+  vnets = {
+    vapimgmt = {
+      vlan_id     = 210
+      description = "API-only management network"
+      subnets = {
+        mgmt = {
+          cidr    = "10.210.0.0/24"
+          gateway = "10.210.0.1"
+        }
+      }
+    }
+  }
+
+  proxmox_url      = var.proxmox_url
+  proxmox_token    = var.proxmox_token
+  proxmox_insecure = var.proxmox_insecure
+}
+```
+
+In this mode `proxmox_host` is not required.
+
+
 ### GitHub source (monorepos / explicit tag pinning)
 
 For monorepos or Terragrunt-based stacks, you can pin a specific tag directly
@@ -168,7 +209,7 @@ Typical reference layout (six VLANs):
 - `dnsmasq` installed on the Proxmox node (if using DHCP).
 - Terraform **>= 1.5.0**.
 - Provider **bpg/proxmox >= 0.50.0**.
-- SSH access from the runner to the Proxmox node for host-side configuration (L3 / SNAT / DHCP).
+- Host login from the runner to the Proxmox node for host-managed configuration (L3 / SNAT / DHCP), unless `enable_host_orchestration = false` is used for a fresh edge-routed deployment.
 
 ---
 
@@ -182,13 +223,14 @@ Typical reference layout (six VLANs):
 | `zone_bridge`  | string | no       | Proxmox bridge to attach the SDN zone to (default: `vmbr0`). |
 | `proxmox_node` | string | yes, unless `proxmox_nodes` is set | Legacy single Proxmox node name (for example `pve` or `hybridhub`). |
 | `proxmox_nodes` | list(string) | no | Cluster node names for shared SDN zone membership. Takes precedence over `proxmox_node`. |
-| `proxmox_host` | string | yes      | Proxmox host (IP or DNS) used over SSH for host-side scripts. |
+| `proxmox_host` | string | yes when host orchestration is enabled | Proxmox host (IP or DNS) used for host-managed gateway, NAT, DHCP, recovery, and cleanup. |
 | `vnets`        | map    | yes      | Map of VNets and subnets (see structure below). |
 
 ### Host L3 / SNAT / DHCP toggles
 
 | Name               | Type   | Default | Description |
 |--------------------|--------|---------|-------------|
+| `enable_host_orchestration` | bool | `true` | Enable host login for gateway, NAT, DHCP, recovery, and cleanup. Disable only for fresh edge-routed deployments. |
 | `enable_host_l3`   | bool   | `true`  | Configure VNet gateway IPs on the host (required for SNAT and DHCP). |
 | `enable_snat`      | bool   | `true`  | Enable SNAT/masquerade for SDN subnets via `uplink_interface`. |
 | `uplink_interface` | string | `vmbr0` | Uplink interface used for SNAT (typically the WAN/LAN bridge). |
@@ -203,6 +245,10 @@ Typical reference layout (six VLANs):
 > `host_static_routes` also requires `enable_host_l3 = true`, because the Proxmox host must be the effective gateway for guests before these routes can influence downstream traffic.
 >
 > A `proxmox_nodes` list containing more than one node requires `enable_host_l3 = false`. Cluster-wide membership is currently edge-routed; host L3, SNAT, DHCP, and static routes remain single-host features.
+>
+> When `enable_host_orchestration = false`, also set `enable_host_l3 = false`,
+> `enable_snat = false`, `enable_dhcp = false`, and leave `host_static_routes`
+> empty. This preserves a clean fresh edge-routed mode with no host login.
 
 ### Recovery / self-heal (host-side drift)
 
