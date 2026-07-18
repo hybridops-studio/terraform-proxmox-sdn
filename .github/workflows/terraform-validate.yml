@@ -60,6 +60,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: api-only-edge-routed
+            path: examples/api-only-edge-routed
           - name: basic
             path: examples/basic
           - name: homelab-six-vlans

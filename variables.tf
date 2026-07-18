@@ -37,8 +37,15 @@ variable "proxmox_nodes" {
 }
 
 variable "proxmox_host" {
-  description = "Proxmox host (hostname or IP) used for SSH-based host-side configuration."
+  description = "Proxmox host (hostname or IP) used for host-managed gateway, NAT, DHCP, recovery, and cleanup."
   type        = string
+  default     = ""
+}
+
+variable "enable_host_orchestration" {
+  description = "Enable host login for gateway, NAT, DHCP, recovery, and cleanup. Disable only for fresh edge-routed deployments."
+  type        = bool
+  default     = true
 }
 
 variable "enable_host_l3" {
