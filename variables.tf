@@ -142,7 +142,7 @@ variable "vnets" {
 
   validation {
     condition     = alltrue([for k in keys(var.vnets) : can(regex("^[A-Za-z][A-Za-z0-9]{1,7}$", k))])
-    error_message = "Each VNet ID must be alphanumeric and at most 8 characters."
+    error_message = "Each VNet ID must start with a letter, contain only letters and digits, and be 2-8 characters long (Proxmox SDN VNet ID constraint)."
   }
 
 }

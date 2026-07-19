@@ -64,7 +64,7 @@ module "sdn" {
   source  = "hybridops-tech/sdn/proxmox"
   version = "~> 0.1.5"
 
-  # SDN zone ID must follow Proxmox SDN rules (2-8 chars, must start with a letter, letters and digits only (Proxmox SDN IDconstrainto))
+  # SDN zone ID must follow Proxmox SDN rules (2-8 chars, must start with a letter, letters and digits only (Proxmox SDN IDconstraint)
   zone_name    = "hybzone"
   proxmox_node = var.proxmox_node
   proxmox_host = var.proxmox_host
