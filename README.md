@@ -65,7 +65,7 @@ module "sdn" {
   source  = "hybridops-tech/sdn/proxmox"
   version = "~> 0.1.5"
 
-  # SDN zone ID must follow Proxmox SDN rules (<= 8 chars, no dashes)
+  # SDN zone ID must follow Proxmox SDN rules (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint)
   zone_name    = "hybzone"
   proxmox_node = var.proxmox_node
   proxmox_host = var.proxmox_host
@@ -220,7 +220,7 @@ Typical reference layout (six VLANs):
 
 | Name           | Type   | Required | Description |
 |----------------|--------|----------|-------------|
-| `zone_name`    | string | yes      | SDN zone ID (≤ 8 chars, lowercase, no dashes – Proxmox SDN rules). |
+| `zone_name`    | string | yes      | SDN zone ID (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint). |
 | `zone_bridge`  | string | no       | Proxmox bridge to attach the SDN zone to (default: `vmbr0`). |
 | `proxmox_node` | string | yes, unless `proxmox_nodes` is set | Legacy single Proxmox node name (for example `pve` or `hybridhub`). |
 | `proxmox_nodes` | list(string) | no | Cluster node names for shared SDN zone membership. Takes precedence over `proxmox_node`. |
@@ -297,7 +297,7 @@ route handoff.
 
 ### VNet structure
 
-Each VNet key must be a valid Proxmox SDN identifier (≤ 8 chars, no dashes).
+Each VNet key must be a valid Proxmox SDN identifier (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint).
 
 ```hcl
 vnets = {
@@ -503,7 +503,7 @@ Destroy is still disruptive for the zone it manages, so reserve it for:
 
 ## Known limitations
 
-- SDN zone and VNet IDs must follow **Proxmox SDN naming rules** (≤ 8 chars, no dashes).
+- SDN zone and VNet IDs must follow **Proxmox SDN naming rules** (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint).
 - After `destroy`, VNet bridge interfaces may persist until networking is reloaded (`ifreload -a` / `pvesh set /cluster/sdn`).
 - `dnsmasq` is the only supported DHCP engine.
 - On older releases, Proxmox UI may show SDN status warnings even when traffic

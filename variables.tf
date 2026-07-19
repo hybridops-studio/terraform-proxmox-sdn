@@ -4,6 +4,11 @@
 variable "zone_name" {
   description = "SDN zone name."
   type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z][A-Za-z0-9]{1,7}$", var.zone_name))
+    error_message = "zone_name must start with a letter, contain only letters and digits, and be 2-8 characters long (Proxmox SDN zone ID constraint)."
+  }
 }
 
 variable "zone_bridge" {
@@ -125,6 +130,8 @@ variable "vnets" {
   description = <<-EOT
     SDN VNets map keyed by VNet ID.
 
+    VNet keys: 2-8 chars, must start with a letter, followed by letters/digits only (e.g. vnet1, vnetA, vnetmgmt)
+
     Each VNet:
       - vlan_id: VLAN tag (e.g. 10, 20, 30)
       - description: logical description
@@ -158,6 +165,12 @@ variable "vnets" {
       dhcp_dns_server  = optional(string)
     }))
   }))
+
+  validation {
+    condition     = alltrue([for k in keys(var.vnets) : can(regex("^[A-Za-z][A-Za-z0-9]{1,7}$", k))])
+    error_message = "Each VNet ID must start with a letter, contain only letters and digits, and be 2-8 characters long (Proxmox SDN VNet ID constraint)."
+  }
+
 }
 
 variable "proxmox_url" {
