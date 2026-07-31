@@ -12,6 +12,6 @@ output "vnets" {
 }
 
 output "subnets" {
-  description = "Created SDN subnets with DHCP configuration."
+  description = "Created SDN subnets."
   value       = module.sdn.subnets
 }

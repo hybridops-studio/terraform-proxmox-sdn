@@ -32,7 +32,14 @@ From the repository root:
 
 3. Edit `terraform.tfvars` to match your environment.
 
-4. Apply:
+4. Validate without touching live infrastructure:
+
+   ```bash
+   terraform init -backend=false -input=false
+   terraform validate -no-color
+   ```
+
+5. Plan and apply when ready:
 
    ```bash
    terraform init
