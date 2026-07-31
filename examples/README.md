@@ -9,9 +9,10 @@ Each example directory also includes its own `README.md` so the Terraform Regist
 | Example | Description |
 |---|---|
 | `basic` | Single VNet with DHCP (minimal configuration). |
+| `api-only-edge-routed` | Fresh edge-routed SDN zone without Proxmox host login. |
 | `homelab-six-vlans` | Six VLAN reference layout for segmented environments. |
 | `no-dhcp` | Static IP networking without DHCP. |
-| `multi-node` | Multi-node pattern (planned). |
+| `multi-node` | Shared edge-routed SDN zone across several Proxmox cluster nodes. |
 
 ## Run an example
 
@@ -31,7 +32,14 @@ From the repository root:
 
 3. Edit `terraform.tfvars` to match your environment.
 
-4. Apply:
+4. Validate without touching live infrastructure:
+
+   ```bash
+   terraform init -backend=false -input=false
+   terraform validate -no-color
+   ```
+
+5. Plan and apply when ready:
 
    ```bash
    terraform init
@@ -50,6 +58,9 @@ proxmox_insecure = true
 proxmox_node     = "pve"
 proxmox_host     = "PROXMOX-IP"
 ```
+
+`api-only-edge-routed` intentionally omits `proxmox_host` because host login is
+disabled for that fresh edge-routed path.
 
 Notes:
 

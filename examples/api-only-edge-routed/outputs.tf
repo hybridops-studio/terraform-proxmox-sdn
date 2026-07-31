@@ -1,5 +1,5 @@
-# file: outputs.tf
-# purpose: Expose key SDN outputs from the example module usage
+# file: examples/api-only-edge-routed/outputs.tf
+# purpose: Expose SDN outputs for the API-only edge-routed example
 
 output "zone_name" {
   description = "SDN zone name."

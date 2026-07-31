@@ -1,5 +1,5 @@
-# file: examples/basic/terraform.tfvars.example
-# purpose: Example inputs for a single-node Proxmox SDN deployment
+# file: examples/homelab-six-vlans/terraform.tfvars.example
+# purpose: Example inputs for a six-VLAN Proxmox SDN reference layout
 
 # Proxmox API configuration
 proxmox_url      = "https://<PROXMOX-IP>:8006/api2/json"
