@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   L3, SNAT, DHCP, and static routes remain single-host features.
 - `host_static_routes` input for host-routed Proxmox SDN deployments that need
   selected upstream or cloud prefixes routed through a separate on-prem edge.
+- Documentation guidance for dedicated Proxmox API tokens and separate SSH
+  access for host-side SDN changes.
 
 ### Changed
 - SDN auto-healing now reconciles HybridOps-managed host static routes in

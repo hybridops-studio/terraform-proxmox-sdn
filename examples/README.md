@@ -53,7 +53,7 @@ All examples expect the following variables:
 
 ```hcl
 proxmox_url      = "https://PROXMOX-IP:8006/api2/json"
-proxmox_token    = "USER@REALM!tokenid=TOKEN_SECRET"
+proxmox_token    = "USER@REALM!TOKENID=TOKEN_SECRET"
 proxmox_insecure = true
 proxmox_node     = "pve"
 proxmox_host     = "PROXMOX-IP"
@@ -66,8 +66,10 @@ Notes:
 
 - Set `proxmox_insecure = false` when your Proxmox API endpoint has a valid TLS certificate.
 - Create an API token in the Proxmox UI under **Datacenter → Permissions → API Tokens**.
+- Use a dedicated Proxmox API token for these examples. Do not copy a root or personal admin token into `terraform.tfvars`.
 - The module and examples expect a single `proxmox_token` string in the format:
   - `<user>@<realm>!<tokenid>=<token_secret>`
+- The token values on this page are format examples only.
 
 ## Example tfvars
 
@@ -75,7 +77,7 @@ Example: `examples/basic/terraform.tfvars.example`
 
 ```hcl
 proxmox_url      = "https://192.168.1.10:8006/api2/json"
-proxmox_token    = "root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_token    = "terraform@pve!sdn=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 proxmox_insecure = true
 
 proxmox_node = "pve"
