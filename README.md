@@ -112,7 +112,8 @@ Example variables (API + node details):
 ```hcl
 # Proxmox API configuration
 proxmox_url      = "https://<PROXMOX-IP>:8006/api2/json"
-proxmox_token    = "user@pam!tokenid=<YOUR-API-TOKEN-SECRET>"
+# Token format example only. Use a dedicated Proxmox API token.
+proxmox_token    = "terraform@pve!sdn=<YOUR-API-TOKEN-SECRET>"
 proxmox_insecure = true
 
 # Proxmox node configuration
@@ -211,6 +212,22 @@ Typical reference layout (six VLANs):
 - Terraform **>= 1.5.0**.
 - Provider **bpg/proxmox >= 0.50.0**.
 - Host login from the runner to the Proxmox node for host-managed configuration (L3 / SNAT / DHCP), unless `enable_host_orchestration = false` is used for a fresh edge-routed deployment.
+
+---
+
+## Proxmox access model
+
+Use a dedicated Proxmox API token for the Terraform provider instead of a root
+or personal admin token. Scope that token to the SDN resources the module
+manages in the target cluster.
+
+Host-side L3, SNAT, static route, and DHCP work is separate from the Proxmox
+API token. Those actions run over SSH to `proxmox_host` because they change
+Linux networking, NAT state, and dnsmasq configuration on the node.
+
+Keep API token access and SSH access separate, store both outside version
+control, and treat the token strings in this README and `examples/` as format
+examples only.
 
 ---
 
