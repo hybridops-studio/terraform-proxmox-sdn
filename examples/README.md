@@ -9,9 +9,10 @@ Each example directory also includes its own `README.md` so the Terraform Regist
 | Example | Description |
 |---|---|
 | `basic` | Single VNet with DHCP (minimal configuration). |
+| `api-only-edge-routed` | Fresh edge-routed SDN zone without Proxmox host login. |
 | `homelab-six-vlans` | Six VLAN reference layout for segmented environments. |
 | `no-dhcp` | Static IP networking without DHCP. |
-| `multi-node` | Multi-node pattern (planned). |
+| `multi-node` | Shared edge-routed SDN zone across several Proxmox cluster nodes. |
 
 ## Run an example
 
@@ -57,6 +58,9 @@ proxmox_insecure = true
 proxmox_node     = "pve"
 proxmox_host     = "PROXMOX-IP"
 ```
+
+`api-only-edge-routed` intentionally omits `proxmox_host` because host login is
+disabled for that fresh edge-routed path.
 
 Notes:
 

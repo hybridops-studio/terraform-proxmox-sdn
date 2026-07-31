@@ -4,6 +4,11 @@
 variable "zone_name" {
   description = "SDN zone name."
   type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z][A-Za-z0-9]{1,7}$", var.zone_name))
+    error_message = "zone_name must start with a letter, contain only letters and digits, and be 2-8 characters long (Proxmox SDN zone ID constraint)."
+  }
 }
 
 variable "zone_bridge" {
@@ -13,13 +18,39 @@ variable "zone_bridge" {
 }
 
 variable "proxmox_node" {
-  description = "Proxmox node name for SDN zone attachment."
+  description = "Legacy single Proxmox node name for SDN zone attachment. Used when proxmox_nodes is empty."
   type        = string
+  default     = ""
+}
+
+variable "proxmox_nodes" {
+  description = "Optional Proxmox node names for cluster-wide SDN zone membership. Takes precedence over proxmox_node when set."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for node in var.proxmox_nodes : trimspace(node) != ""])
+    error_message = "proxmox_nodes must not contain empty node names."
+  }
+
+  validation {
+    condition = length(var.proxmox_nodes) == length(distinct([
+      for node in var.proxmox_nodes : trimspace(node)
+    ]))
+    error_message = "proxmox_nodes must not contain duplicate node names."
+  }
 }
 
 variable "proxmox_host" {
-  description = "Proxmox host (hostname or IP) used for SSH-based host-side configuration."
+  description = "Proxmox host (hostname or IP) used for host-managed gateway, NAT, DHCP, recovery, and cleanup."
   type        = string
+  default     = ""
+}
+
+variable "enable_host_orchestration" {
+  description = "Enable host login for gateway, NAT, DHCP, recovery, and cleanup. Disable only for fresh edge-routed deployments."
+  type        = bool
+  default     = true
 }
 
 variable "enable_host_l3" {
@@ -99,6 +130,8 @@ variable "vnets" {
   description = <<-EOT
     SDN VNets map keyed by VNet ID.
 
+    VNet keys: 2-8 chars, must start with a letter, followed by letters/digits only (e.g. vnet1, vnetA, vnetmgmt)
+
     Each VNet:
       - vlan_id: VLAN tag (e.g. 10, 20, 30)
       - description: logical description
@@ -132,6 +165,12 @@ variable "vnets" {
       dhcp_dns_server  = optional(string)
     }))
   }))
+
+  validation {
+    condition     = alltrue([for k in keys(var.vnets) : can(regex("^[A-Za-z][A-Za-z0-9]{1,7}$", k))])
+    error_message = "Each VNet ID must start with a letter, contain only letters and digits, and be 2-8 characters long (Proxmox SDN VNet ID constraint)."
+  }
+
 }
 
 variable "proxmox_url" {
