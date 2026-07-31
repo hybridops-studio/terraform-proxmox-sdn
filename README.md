@@ -481,23 +481,60 @@ cluster example.
 If a site already has manually created Proxmox SDN objects, do **not** assume this
 module can safely take them over just by using the same names.
 
-Safe options are:
-- create a **new zone/VNet set** managed only by this module, or
-- perform a deliberate **import/cutover** into Terraform state before treating
-  the module as the source of truth
+Choose the ownership path before the first live plan.
 
-Unsafe pattern:
-- pointing the module at an existing manually managed zone/VNet set without an
-  import plan, then expecting `destroy` to distinguish operator-created objects
-  from module-managed ones
+### Start with a new managed zone
 
-The module is safe when it is the authoritative owner of the SDN objects in its
-Terraform state.
+This is the lowest-risk path when the existing zone carries active workloads or
+its ownership is unclear.
+
+- Create a new zone and VNet set with IDs that do not overlap the existing set.
+- Test attachment, VLAN mapping, routing handoff, and teardown with a temporary
+  workload.
+- Move active workloads only after the new path and rollback have been checked.
+
+The existing objects remain outside this module and can continue to be managed
+separately.
+
+### Import and cut over existing objects
+
+Use this path only when the module is intended to become authoritative for the
+existing SDN objects.
+
+- Define the zone, VNets, and subnets in configuration before import.
+- Plan the selected zone, VNets, and subnets as one cutover.
+- Record the current Proxmox configuration and back up any existing Terraform
+  state.
+- Import each managed object into its intended resource address.
+- Review the first plan for replacement or deletion before allowing changes.
+- Schedule the cutover around the workloads attached to the affected VNets.
+
+Importing only the parent zone while active VNets and subnets remain manually
+managed splits ownership and makes destroy harder to review. Keep the set
+external until the cutover plan covers every object the module will own.
+
+Importing SDN objects does not require the module to take over routing. When a
+separate router owns gateways, DHCP, NAT, firewall policy, and static routes,
+keep host orchestration and the related host features disabled.
+
+### Keep existing objects externally managed
+
+This is a valid long-term boundary. The module can manage new zones while the
+existing zone, VNets, and subnets remain outside its state. Do not reuse those
+external IDs in the managed configuration.
+
+Whichever path is chosen, names alone do not transfer ownership. The module is
+authoritative only for the SDN objects represented in its Terraform state.
 
 ## Destroy scope
 
 `terraform destroy` / `hyops destroy` is **zone-scoped**, not a blanket Proxmox
 network wipe.
+
+For imported objects, this scope follows Terraform state rather than how the
+objects were originally created. Review the destroy plan carefully after a
+brownfield cutover; Terraform cannot infer which imported objects an operator
+may later want to preserve.
 
 What it removes for the zone in its own state:
 - the SDN zone/VNet/subnet objects managed by the module
