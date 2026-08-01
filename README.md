@@ -599,5 +599,14 @@ Before opening a PR:
 
 - Run `terraform fmt`.
 - Run `terraform validate`.
+- Run the mocked root-module tests (no live Proxmox endpoint or credentials are
+  required):
+
+  ```bash
+  terraform init -backend=false -input=false
+  terraform test -no-color
+  ```
+
+- Validate changed configurations under `examples/` separately.
 - Update `examples/` if inputs or usage change.
 - Add a short entry to `CHANGELOG.md`.
