@@ -582,18 +582,20 @@ This module implements the Proxmox SDN foundation used by [HybridOps](https://hy
 
 ## License
 
-- Code: [MIT-0](https://spdx.org/licenses/MIT-0.html)  
-- Documentation & diagrams: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Code: [MIT-0](./LICENSE)
+- Documentation and diagrams: [CC BY 4.0](https://docs.hybridops.tech/legal/documentation-license/)
 
-See the [HybridOps licensing overview](https://docs.hybridops.tech/briefings/legal/licensing/) for project-wide licence details.
+See the [HybridOps licensing overview](https://docs.hybridops.tech/legal/licensing/) for project-wide licence details.
 
 ---
 
 ## Contributing
 
-Contributions are welcome via GitHub:
+Contributions are welcome through GitHub:
 
-- [Repository](https://github.com/hybridops-tech/terraform-proxmox-sdn)
+- [Contribution guide](./CONTRIBUTING.md)
+- [Project-wide contribution paths](https://docs.hybridops.tech/guides/reference/contributing/)
+- [Repository issues and pull requests](https://github.com/hybridops-tech/terraform-proxmox-sdn)
 
 Before opening a PR:
 
@@ -609,4 +611,4 @@ Before opening a PR:
 
 - Validate changed configurations under `examples/` separately.
 - Update `examples/` if inputs or usage change.
-- Add a short entry to `CHANGELOG.md`.
+- Add a short entry to [`CHANGELOG.md`](./CHANGELOG.md).
