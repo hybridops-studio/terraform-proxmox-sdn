@@ -14,7 +14,7 @@ Thank you for considering contributing to this project.
    ```
 
 3.Make your changes following the code standards below.
-4.Test with `terraform fmt`, `terraform validate`, and (where possible) an actual deployment.
+4.Test with `terraform fmt`, `terraform validate`, the root module tests, and (where possible) an actual deployment.
 5.Commit your changes:
 
    ```bash
@@ -43,6 +43,24 @@ Thank you for considering contributing to this project.
 ---
 
 ## Testing
+
+### Root module tests
+
+Run the same module tests as CI from the repository root:
+
+```bash
+terraform init -backend=false -input=false
+terraform test -no-color
+```
+
+These tests use mocked providers, so they do not require a live Proxmox
+endpoint, real credentials, or other private values.
+
+### Example validation and live testing
+
+Module tests are separate from validating the configurations under `examples/`.
+Run `terraform init -backend=false -input=false` and `terraform validate
+-no-color` inside each example directory affected by your change.
 
 Where possible, test changes against a real **Proxmox VE 8.x** node.
 
