@@ -1,0 +1,164 @@
+name: ShellCheck
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  SHELLCHECK_VERSION: v0.11.0
+  SHELLCHECK_ARCHIVE: shellcheck-v0.11.0.linux.x86_64.tar.gz
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install ShellCheck
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl -fsSL \
+            "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/${SHELLCHECK_ARCHIVE}" \
+            -o "${SHELLCHECK_ARCHIVE}"
+
+          tar -xzf "${SHELLCHECK_ARCHIVE}"
+
+          install -m755 \
+            "shellcheck-${SHELLCHECK_VERSION}/shellcheck" \
+            /usr/local/bin/shellcheck
+
+          shellcheck --version
+
+      - name: Find shell scripts
+        id: scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -d '' files < <(find . -type f -name '*.sh' -print0)
+
+          if (( ${#files[@]} == 0 )); then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf '%s\0' "${files[@]}" > files.list
+
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Run ShellCheck
+        if: steps.scripts.outputs.found == 'true'
+        id: shellcheck
+        shell: bash
+        run: |
+          set +e
+
+          mapfile -d '' files < files.list
+
+          shellcheck \
+            --external-sources \
+            -f json1 \
+            "${files[@]}" > shellcheck.json
+
+          status=$?
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+          exit 0
+
+      - name: Generate Summary
+        if: steps.scripts.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          errors=$(jq '[.comments[] | select(.level=="error")] | length' shellcheck.json)
+          warnings=$(jq '[.comments[] | select(.level=="warning")] | length' shellcheck.json)
+          infos=$(jq '[.comments[] | select(.level=="info")] | length' shellcheck.json)
+
+          {
+            echo "# ShellCheck Report"
+            echo
+            echo "| Level | Count |"
+            echo "|------:|------:|"
+            echo "| ❌ Errors | $errors |"
+            echo "| ⚠️ Warnings | $warnings |"
+            echo "| ℹ️ Info | $infos |"
+            echo
+
+            if jq -e '.comments | length > 0' shellcheck.json >/dev/null; then
+              echo "## Findings"
+              echo
+              echo "| File | Line | Rule | Level | Message |"
+              echo "|------|-----:|------|-------|---------|"
+
+              jq -r '
+                .comments[] |
+                "| `\(.file)` | \(.line) | [SC\(.code)](https://www.shellcheck.net/wiki/SC\(.code)) | \(.level) | \(.message) |"
+              ' shellcheck.json
+            else
+              echo "✅ ShellCheck passed. No issues found."
+            fi
+          } | tee summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update PR Comment
+        if: github.event_name == 'pull_request' && steps.scripts.outputs.found == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+
+            const marker = '<!-- shellcheck-report -->';
+            const body = marker + '\n\n' + fs.readFileSync('summary.md', 'utf8');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner,
+                repo,
+                issue_number
+              }
+            );
+
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+              });
+            }
+
+      - name: Fail if ShellCheck found errors
+        if: steps.scripts.outputs.found == 'true'
+        shell: bash
+        run: |
+          exit "${{ steps.shellcheck.outputs.status }}"
