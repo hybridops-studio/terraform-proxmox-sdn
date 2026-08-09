@@ -1,47 +1,51 @@
-# terraform-proxmox-sdn
+# Proxmox SDN Terraform module
 
 [![Terraform Registry](https://img.shields.io/badge/terraform_registry-hybridops--tech%2Fsdn%2Fproxmox-623CE4.svg)](https://registry.terraform.io/modules/hybridops-tech/sdn/proxmox)
 [![Terraform validate](https://github.com/hybridops-tech/terraform-proxmox-sdn/actions/workflows/terraform-validate.yml/badge.svg)](https://github.com/hybridops-tech/terraform-proxmox-sdn/actions/workflows/terraform-validate.yml)
 
-Terraform module for managing **Proxmox SDN** (Software-Defined Networking) with optional **host L3**, **SNAT**, and **per-subnet DHCP via dnsmasq**.
+Terraform module for Proxmox VE SDN zones, VNets and subnets. Optional host
+orchestration configures gateway addresses, SNAT, static routes and dnsmasq
+DHCP on a Proxmox node.
 
-Use it when you want Proxmox networking to be **rebuildable and source-controlled** rather than manually recreated after every environment reset, host replacement, or rollout.
+The module manages:
 
-It creates a VLAN-backed SDN zone, VNets, and subnets on **Proxmox VE 8.x** and can:
+- a VLAN-backed Proxmox SDN zone;
+- one or more VNets and subnets;
+- single-node or cluster-wide zone membership;
+- optional host-side L3, SNAT, DHCP and static routes;
+- SDN apply, host-state reconciliation and scoped cleanup; and
+- structured subnet and IPAM outputs for downstream consumers.
 
-- Configure **gateway IPs** on VNet bridge interfaces (host L3).
-- Add **SNAT / masquerade** rules per subnet.
-- Provision **dnsmasq DHCP** pools per subnet.
-- Run fresh **edge-routed** deployments without Proxmox host login.
-- Emit a **NetBox-ready IPAM export payload** (prefixes + DHCP metadata).
+## Operating modes
 
-The two practical operating modes are:
+| Mode | Proxmox responsibility | External responsibility | Access |
+|---|---|---|---|
+| API-only edge-routed | SDN zone, VNets and subnet metadata | Gateways, routing, DHCP, firewall policy and upstream access | Proxmox API only |
+| Host-routed | SDN plus gateway addresses, optional SNAT, DHCP and static routes | Any routing or policy not declared through this module | Proxmox API and root SSH to one node |
+| Cluster edge-routed | Shared zone and VNet membership across several nodes | L3 services and upstream routing | Proxmox API; optional SSH to one node for apply and status hooks |
 
-- **Host-routed**: Proxmox owns the gateway IPs, NAT, and optional DHCP. Good for bootstrap, evaluation, and smaller sites.
-- **Edge-routed**: Proxmox SDN provides segmentation, while a separate routing layer owns gateways, DHCP, firewall policy, and upstream routing. Fresh edge-routed deployments can disable host login.
+Host-side features are intentionally limited to one Proxmox node. A
+`proxmox_nodes` list with more than one member requires `enable_host_l3 = false`.
 
-> **Module Source**
->
-> Prefer the Terraform Registry source `hybridops-tech/sdn/proxmox` for normal
-> consumption. Use a GitHub source only when you need an explicit repository or
-> tag pin outside the registry workflow.
+## Requirements
 
-> **Repository**
->
-> Source and issues: https://github.com/hybridops-tech/terraform-proxmox-sdn
->
-> If the module is useful, a GitHub star is appreciated.
+- Terraform `>= 1.5.0`.
+- Proxmox VE 8.x with SDN enabled.
+- A VLAN-aware bridge, normally `vmbr0`.
+- `bpg/proxmox >= 0.50.0` and `hashicorp/null >= 3.2.0`.
+- A dedicated Proxmox API token with access to the managed SDN objects.
 
-Designed for **production-style Proxmox platforms** and controlled evaluation environments, and usable:
+Host-routed mode also requires:
 
-- As **standalone Terraform** in a focused project, validation environment, or production stack.
-- As part of a **Terragrunt / monorepo stack** (for example, within a HybridOps `live-v1` layout).
-
----
+- `ssh` and `scp` on the Terraform runner;
+- non-interactive root SSH access to `proxmox_host`; and
+- dnsmasq on the Proxmox node when DHCP is enabled.
 
 ## Quick start
 
-### Minimal example (Terraform Registry / standalone)
+This API-only example creates one edge-routed VNet without logging in to the
+Proxmox host. The subnet gateway is retained as SDN metadata; an external
+router must provide the actual gateway and related services.
 
 ```hcl
 terraform {
@@ -63,76 +67,10 @@ provider "proxmox" {
 
 module "sdn" {
   source  = "hybridops-tech/sdn/proxmox"
-  version = "~> 0.1.5"
-
-  # SDN zone ID must follow Proxmox SDN rules (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint)
-  zone_name    = "hybzone"
-  proxmox_node = var.proxmox_node
-  proxmox_host = var.proxmox_host
-
-  # Optional host L3 and SNAT
-  enable_host_l3   = true
-  enable_snat      = true
-  uplink_interface = "vmbr0"
-
-  # Optional DHCP (requires enable_host_l3 = true)
-  enable_dhcp = true
-  dns_domain  = "hybridops.local"
-  dns_lease   = "24h"
-  # Optional: force one host-side reconcile when recovering from drift
-  # (gateway/NAT/DHCP) without changing topology inputs.
-  # host_reconcile_nonce = "CHG-20260225-01"
-
-  vnets = {
-    vnetmgmt = {
-      vlan_id     = 10
-      description = "Management Network"
-
-      subnets = {
-        mgmt = {
-          cidr    = "10.10.0.0/24"
-          gateway = "10.10.0.1"
-
-          # DHCP is opt-out at subnet level when enable_dhcp = true:
-          # - omit dhcp_enabled to use module defaults (enabled with default ranges), or
-          # - set dhcp_enabled = false to disable DHCP for this subnet.
-          dhcp_enabled     = true
-          dhcp_range_start = "10.10.0.100"
-          dhcp_range_end   = "10.10.0.200"
-          dhcp_dns_server  = "8.8.8.8"
-        }
-      }
-    }
-  }
-}
-```
-
-Example variables (API + node details):
-
-```hcl
-# Proxmox API configuration
-proxmox_url      = "https://<PROXMOX-IP>:8006/api2/json"
-# Token format example only. Use a dedicated Proxmox API token.
-proxmox_token    = "terraform@pve!sdn=<YOUR-API-TOKEN-SECRET>"
-proxmox_insecure = true
-
-# Proxmox node configuration
-proxmox_node = "<PROXMOX-NODE-NAME>"
-proxmox_host = "<PROXMOX-IP>"
-```
-
-### Fresh edge-routed example without host login
-
-For a fresh deployment where the Proxmox host does not own gateways, NAT, DHCP,
-or static routes, disable host orchestration:
-
-```hcl
-module "sdn" {
-  source  = "hybridops-tech/sdn/proxmox"
-  version = "~> 0.1.5"
+  version = "~> 0.1.6"
 
   zone_name    = "apionly"
-  proxmox_node = var.proxmox_node
+  proxmox_node = "pve1"
 
   enable_host_orchestration = false
   enable_host_l3            = false
@@ -142,7 +80,8 @@ module "sdn" {
   vnets = {
     vapimgmt = {
       vlan_id     = 210
-      description = "API-only management network"
+      description = "Management network"
+
       subnets = {
         mgmt = {
           cidr    = "10.210.0.0/24"
@@ -158,457 +97,235 @@ module "sdn" {
 }
 ```
 
-In this mode `proxmox_host` is not required. Existing host-managed deployments
-should be cleaned up before host access is removed; this mode is intended for
-fresh edge-routed use.
+Initialise and review the plan before applying it:
 
-### GitHub source (monorepos / explicit tag pinning)
+```text
+terraform init
+terraform plan
+terraform apply
+```
 
-For monorepos or Terragrunt-based stacks, you can pin a specific tag directly
-from GitHub when you do not want to consume the registry release path:
+Do not commit API tokens or populated `terraform.tfvars` files.
+
+## Host-routed configuration
+
+Host-routed mode makes the selected Proxmox node the gateway for each declared
+subnet. SNAT, DHCP and static routes remain independently configurable.
 
 ```hcl
 module "sdn" {
-  source = "git::https://github.com/hybridops-tech/terraform-proxmox-sdn.git//?ref=v0.1.5"
-}
-```
+  source  = "hybridops-tech/sdn/proxmox"
+  version = "~> 0.1.6"
 
-In Terragrunt, this is typically wrapped via `terraform { source = "..." }` and `inputs = { ... }` in a stack directory such as:
+  zone_name    = "hybzone"
+  proxmox_node = "pve1"
+  proxmox_host = "192.0.2.10"
 
-```text
-hybridops-platform/infra/terraform/live-v1/onprem/proxmox/core/00-foundation/network-sdn/
-```
+  enable_host_l3 = true
+  enable_snat    = true
+  enable_dhcp    = true
 
----
+  vnets = {
+    vnetmgmt = {
+      vlan_id     = 10
+      description = "Management network"
 
-## Features
-
-- Creates a VLAN-backed **SDN zone** on a Proxmox bridge.
-- Supports one zone across several Proxmox nodes through optional `proxmox_nodes` membership.
-- Manages **VNets** and **subnets** via a single `vnets` map.
-- Optional **host L3**: assigns gateway IPs on VNet bridge interfaces.
-- Optional **SNAT**: per-subnet masquerade to an uplink interface.
-- Optional **dnsmasq DHCP**: per-subnet DHCP pools, driven from Terraform state.
-- Exposes **NetBox IPAM export payload** via `output.ipam_prefixes`.
-- Designed to be **idempotent** and safe to re-apply.
-
-Typical reference layout (six VLANs):
-
-- Environments: `mgmt`, `obs`, `dev`, `staging`, `prod`, `validation`.
-- For `/24` subnets:
-  - `.1` – gateway (VNet bridge).
-  - `.2–.9` – infrastructure services.
-  - `.10–.119` – static IPs (IPAM / NetBox).
-  - `.120–.220` – DHCP pool.
-  - `.221–.254` – reserved.
-
----
-
-## Requirements
-
-- Proxmox VE **8.x** with SDN enabled.
-- VLAN-aware bridge (for example `vmbr0`).
-- `dnsmasq` installed on the Proxmox node (if using DHCP).
-- Terraform **>= 1.5.0**.
-- Provider **bpg/proxmox >= 0.50.0**.
-- Host login from the runner to the Proxmox node for host-managed configuration (L3 / SNAT / DHCP), unless `enable_host_orchestration = false` is used for a fresh edge-routed deployment.
-
----
-
-## Proxmox access model
-
-Use a dedicated Proxmox API token for the Terraform provider instead of a root
-or personal admin token. Scope that token to the SDN resources the module
-manages in the target cluster.
-
-Host-side L3, SNAT, static route, and DHCP work is separate from the Proxmox
-API token. Those actions run over SSH to `proxmox_host` because they change
-Linux networking, NAT state, and dnsmasq configuration on the node.
-
-Keep API token access and SSH access separate, store both outside version
-control, and treat the token strings in this README and `examples/` as format
-examples only.
-
----
-
-## Inputs
-
-### Core inputs
-
-| Name           | Type   | Required | Description |
-|----------------|--------|----------|-------------|
-| `zone_name`    | string | yes      | SDN zone ID (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint). |
-| `zone_bridge`  | string | no       | Proxmox bridge to attach the SDN zone to (default: `vmbr0`). |
-| `proxmox_node` | string | yes, unless `proxmox_nodes` is set | Legacy single Proxmox node name (for example `pve` or `hybridhub`). |
-| `proxmox_nodes` | list(string) | no | Cluster node names for shared SDN zone membership. Takes precedence over `proxmox_node`. |
-| `proxmox_host` | string | yes when host orchestration is enabled | Proxmox host (IP or DNS) used for host-managed gateway, NAT, DHCP, recovery, and cleanup. |
-| `vnets`        | map    | yes      | Map of VNets and subnets (see structure below). |
-
-### Host L3 / SNAT / DHCP toggles
-
-| Name               | Type   | Default | Description |
-|--------------------|--------|---------|-------------|
-| `enable_host_orchestration` | bool | `true` | Enable host login for gateway, NAT, DHCP, recovery, and cleanup. Disable only for fresh edge-routed deployments. |
-| `enable_host_l3`   | bool   | `true`  | Configure VNet gateway IPs on the host (required for SNAT and DHCP). |
-| `enable_snat`      | bool   | `true`  | Enable SNAT/masquerade for SDN subnets via `uplink_interface`. |
-| `uplink_interface` | string | `vmbr0` | Uplink interface used for SNAT (typically the WAN/LAN bridge). |
-| `enable_dhcp`      | bool   | `false` | Enable dnsmasq DHCP provisioning (requires `enable_host_l3 = true`). |
-| `dns_domain`       | string | `hybridops.local` | DNS domain used in dnsmasq config. |
-| `dns_lease`        | string | `24h`   | DHCP lease time (`<number><s|m|h|d>`, e.g. `24h`). |
-| `host_reconcile_nonce` | string | `""` | Optional operator token to force host-side SDN reconciliation (gateway/NAT/DHCP) on the next apply, even when topology inputs are unchanged. |
-| `host_static_routes` | list(object) | `[]` | Optional static routes installed on the Proxmox host when it owns the guest gateway role. |
-
-> The module enforces that `enable_dhcp = true` requires `enable_host_l3 = true`, so dnsmasq can bind to VNet interfaces safely.
->
-> `host_static_routes` also requires `enable_host_l3 = true`, because the Proxmox host must be the effective gateway for guests before these routes can influence downstream traffic.
->
-> A `proxmox_nodes` list containing more than one node requires `enable_host_l3 = false`. Cluster-wide membership is currently edge-routed; host L3, SNAT, DHCP, and static routes remain single-host features.
->
-> When `enable_host_orchestration = false`, also set `enable_host_l3 = false`,
-> `enable_snat = false`, `enable_dhcp = false`, and leave `host_static_routes`
-> empty. This preserves a clean fresh edge-routed mode with no host login.
-
-### Recovery / self-heal (host-side drift)
-
-If host-side SDN state drifts (for example a `vnet*` bridge exists but the
-expected gateway IP is missing) and topology inputs are unchanged, rerun
-`terraform apply` with a one-time `host_reconcile_nonce` value to force the
-host-side gateway/NAT/DHCP setup scripts to re-run:
-
-```hcl
-host_reconcile_nonce = "CHG-20260225-01"
-```
-
-This is the supported recovery path. Avoid changing unrelated settings (for
-example `dns_lease`) just to trigger reconciliation.
-
-### Optional upstream/cloud route handoff
-
-When the Proxmox host is running in host-routed mode but a separate on-prem edge
-owns cloud or WAN reachability, install explicit prefixes on the Proxmox host:
-
-```hcl
-host_static_routes = [
-  {
-    destination_cidr = "10.72.0.0/20"
-    next_hop         = "10.10.0.20"
-  },
-  {
-    destination_cidr = "10.72.16.0/20"
-    next_hop         = "10.10.0.20"
-  },
-  {
-    destination_cidr = "10.74.0.0/18"
-    next_hop         = "10.10.0.20"
-  },
-]
-```
-
-This is the supported model for site-extension or edge-anchor designs where:
-- guests still use the Proxmox host as their default gateway
-- the separate edge/router is the owner of upstream cloud prefixes
-
-For greenfield sites, or where guest gateway ownership can be moved safely,
-prefer the edge-routed model instead of extending host-routed mode with static
-route handoff.
-
-### VNet structure
-
-Each VNet key must be a valid Proxmox SDN identifier (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint).
-
-```hcl
-vnets = {
-  vnetmgmt = {
-    vlan_id     = number
-    description = string
-
-    subnets = {
-      subnet_name = {
-        cidr    = string
-        gateway = string
-
-        # DHCP configuration:
-        # - enable_dhcp must be true (module-level)
-        # - dhcp_enabled is optional (subnet-level)
-        #
-        # Behaviour when enable_dhcp = true:
-        # - dhcp_enabled omitted -> DHCP enabled using defaults (start/end/DNS), unless you override.
-        # - dhcp_enabled = false -> DHCP disabled for that subnet.
-        dhcp_enabled     = optional(bool)
-        dhcp_range_start = optional(string)  # defaults to cidrhost(cidr, dhcp_default_start_host)
-        dhcp_range_end   = optional(string)  # defaults to cidrhost(cidr, dhcp_default_end_host)
-        dhcp_dns_server  = optional(string)  # defaults to dhcp_default_dns_server
+      subnets = {
+        mgmt = {
+          cidr             = "10.10.0.0/24"
+          gateway          = "10.10.0.1"
+          dhcp_range_start = "10.10.0.120"
+          dhcp_range_end   = "10.10.0.220"
+          dhcp_dns_server  = "1.1.1.1"
+        }
       }
     }
   }
 
-  # additional VNets...
+  proxmox_url      = var.proxmox_url
+  proxmox_token    = var.proxmox_token
+  proxmox_insecure = var.proxmox_insecure
 }
 ```
 
----
+When module-level DHCP is enabled, DHCP is enabled for each subnet unless that
+subnet sets `dhcp_enabled = false`. Missing ranges and DNS values are derived
+from the module defaults.
+
+## VNet schema
+
+Zone and VNet IDs must start with a letter, contain only letters and digits,
+and be between two and eight characters long. Subnet map keys are local
+Terraform identifiers and do not have the same Proxmox naming restriction.
+
+```hcl
+vnets = {
+  vnetmgmt = {
+    vlan_id     = 10
+    description = "Management network"
+
+    subnets = {
+      mgmt = {
+        cidr             = "10.10.0.0/24"
+        gateway          = "10.10.0.1"
+        dhcp_enabled     = true
+        dhcp_range_start = "10.10.0.120"
+        dhcp_range_end   = "10.10.0.220"
+        dhcp_dns_server  = "1.1.1.1"
+      }
+    }
+  }
+}
+```
+
+## Inputs
+
+### SDN and access
+
+| Name | Type | Default | Description |
+|---|---|---:|---|
+| `zone_name` | `string` | required | Proxmox SDN zone ID. |
+| `zone_bridge` | `string` | `"vmbr0"` | Bridge used by the VLAN zone. |
+| `proxmox_node` | `string` | `""` | Single node membership; used when `proxmox_nodes` is empty. |
+| `proxmox_nodes` | `list(string)` | `[]` | Cluster node membership; takes precedence over `proxmox_node`. |
+| `proxmox_host` | `string` | `""` | Host reached by SSH when host orchestration is enabled. |
+| `vnets` | `map(object)` | required | VNet and subnet declarations described above. |
+| `proxmox_url` | `string` | required | Proxmox API URL. |
+| `proxmox_token` | `string` | required, sensitive | Proxmox API token. |
+| `proxmox_insecure` | `bool` | `false` | Disable TLS verification for the Proxmox API. |
+
+Set either `proxmox_node` or `proxmox_nodes`. When host orchestration is
+enabled, `proxmox_host` is also required.
+
+### Host orchestration
+
+| Name | Type | Default | Description |
+|---|---|---:|---|
+| `enable_host_orchestration` | `bool` | `true` | Enable SSH-based apply, recovery and cleanup hooks. |
+| `enable_host_l3` | `bool` | `true` | Assign gateway addresses to VNet interfaces. |
+| `enable_snat` | `bool` | `true` | Add per-subnet masquerade rules through `uplink_interface`. |
+| `uplink_interface` | `string` | `"vmbr0"` | Host interface used for SNAT. |
+| `host_static_routes` | `list(object)` | `[]` | Destination CIDR and next-hop pairs installed on the host. |
+| `host_reconcile_nonce` | `string` | `""` | Operator value that forces host-state reconciliation on the next apply. |
+
+When `enable_host_orchestration = false`, also disable host L3, SNAT and DHCP,
+and leave `host_static_routes` empty.
+
+### DHCP and IPAM output
+
+| Name | Type | Default | Description |
+|---|---|---:|---|
+| `enable_dhcp` | `bool` | `false` | Manage per-subnet dnsmasq services; requires host L3. |
+| `dns_domain` | `string` | `"hybridops.local"` | DHCP DNS suffix. |
+| `dns_lease` | `string` | `"24h"` | dnsmasq lease duration. |
+| `dhcp_default_dns_server` | `string` | `"8.8.8.8"` | Default DNS server for DHCP-enabled subnets. |
+| `dhcp_default_start_host` | `number` | `120` | Default first host index in a DHCP pool. |
+| `dhcp_default_end_host` | `number` | `220` | Default last host index in a DHCP pool. |
+| `ipam_site` | `string` | `"onprem-hybridhub"` | Site value included in `ipam_prefixes`. |
+| `ipam_status` | `string` | `"active"` | Status value included in `ipam_prefixes`. |
+| `static_last_host` | `number` | `119` | Last static host index used in generated descriptions. |
 
 ## Outputs
 
-| Name           | Type | Description |
-|----------------|------|-------------|
-| `zone_name`    | string | SDN zone name (Proxmox SDN zone ID). |
-| `vnets`        | map    | Map of VNet keys to objects with `id`, `zone`, and `vlan_id`. |
-| `subnets`      | map    | Map of subnet keys (`<vnet>-<subnet>`) to objects with CIDR, gateway, and DHCP metadata (effective values). |
-| `ipam_prefixes`| list   | NetBox IPAM dataset derived from SDN inputs (prefixes + DHCP metadata). |
+| Name | Description |
+|---|---|
+| `zone_name` | Managed Proxmox SDN zone ID. |
+| `vnets` | VNet IDs, zone membership and VLAN tags. |
+| `subnets` | Effective subnet, gateway and DHCP values. |
+| `ipam_prefixes` | Structured prefix and DHCP metadata for downstream IPAM consumers. |
 
-### Example: inspecting outputs
+Inspect structured outputs with:
 
-After `terraform apply`:
-
-```bash
-terraform output zone_name
-terraform output vnets
-terraform output subnets
+```text
+terraform output -json vnets
+terraform output -json subnets
 terraform output -json ipam_prefixes
 ```
 
-Example `ipam_prefixes` item (shape):
+## Ownership and lifecycle
+
+### Existing SDN objects
+
+Matching names do not transfer existing Proxmox objects into Terraform state.
+For a brownfield environment, choose one of these boundaries before the first
+apply:
+
+1. create a new module-owned zone;
+2. define and import the complete existing zone, VNet and subnet set; or
+3. leave the existing objects externally managed.
+
+Review the first plan after an import for replacement and deletion actions.
+Avoid importing only the parent zone while its VNets or subnets remain under a
+different ownership model.
+
+### Reconciliation
+
+Host-side setup is driven by Terraform resource changes. If the declared
+topology is unchanged but gateway, NAT, DHCP or route state has drifted, set a
+new one-time value:
 
 ```hcl
-{
-  site         = "onprem-hybridhub"
-  status       = "active"
-  vlan_id      = 10
-  role         = "management"
-  prefix       = "10.10.0.0/24"
-  gateway      = "10.10.0.1"
-  dhcp_enabled = true
-  dhcp_start   = "10.10.0.120"
-  dhcp_end     = "10.10.0.220"
-  description  = "Management network (static .2-.119; DHCP .120-.220)"
-}
+host_reconcile_nonce = "CHG-20260809-01"
 ```
 
-This output is designed to be consumed by downstream tooling (for example, NetBox seeders) without maintaining a separate IPAM CSV.
+Leave the applied value in configuration and change it only when another
+forced reconciliation is required. Do not change unrelated inputs merely to
+trigger host reconciliation.
 
----
+### Destroy scope
 
-## DHCP behaviour
+Destroy removes SDN objects represented in the module state and the host-side
+gateway, route, NAT and DHCP artefacts tagged for that zone. It is not a
+cluster-wide network reset and does not intentionally remove unrelated zones,
+bridges, firewall rules or DHCP services.
 
-- DHCP is provided by **dnsmasq** on the Proxmox node, driven from the `vnets` map.
-- DHCP is controlled at two levels:
-  - Module-level: `enable_dhcp = true` enables DHCP orchestration.
-  - Subnet-level: `dhcp_enabled` is an opt-out when `enable_dhcp = true`.
-- When DHCP is enabled for a subnet and explicit ranges are not provided, the module derives defaults from:
-  - `dhcp_default_start_host`
-  - `dhcp_default_end_host`
-  - `dhcp_default_dns_server`
-- When `enable_dhcp = false`, no dnsmasq configuration is rendered and no DHCP systemd units are managed.
-- When `enable_host_l3 = true` but `enable_dhcp = false`, you still get:
-  - VNet bridge interfaces with gateway IPs.
-  - Optional SNAT rules, so subnets can reach the internet with static IPs only.
+Destroy is disruptive to workloads attached to the managed VNets. Review the
+destroy plan and move or stop dependent workloads first. Proxmox VNet
+interfaces may remain visible until SDN networking is reloaded.
 
-## Deployment modes
+## Examples
 
-The module supports two valid operating patterns:
+| Example | Purpose |
+|---|---|
+| [`api-only-edge-routed`](examples/api-only-edge-routed) | API-only zone with routing owned externally. |
+| [`basic`](examples/basic) | Single VNet with host L3, SNAT and DHCP. |
+| [`no-dhcp`](examples/no-dhcp) | Host L3 and SNAT with static guest addressing. |
+| [`homelab-six-vlans`](examples/homelab-six-vlans) | Six-VLAN segmented reference layout. |
+| [`multi-node`](examples/multi-node) | Shared edge-routed zone across cluster nodes. |
 
-### 1. Host-routed mode
+See the [examples index](examples/README.md) for variables and validation
+instructions.
 
-Use this for:
-- bootstrap foundations
-- academy and training environments
-- single-node or small-site deployments where Proxmox can safely provide L3/NAT/DHCP
+## Validation
 
-Typical settings:
+The root tests use mocked providers and do not require a live Proxmox endpoint.
 
-```hcl
-enable_host_l3 = true
-enable_snat    = true
-enable_dhcp    = true
+```text
+terraform fmt -check -recursive
+terraform init -backend=false -input=false
+terraform validate -no-color
+terraform test -no-color
 ```
 
-In this mode the Proxmox node owns:
-- subnet gateway IPs on `vnet*`
-- optional SNAT via the chosen uplink
-- optional dnsmasq-based DHCP
-- optional `host_static_routes` for selected upstream or cloud prefixes
+Validate each modified example separately. Live changes should also be planned
+against a non-production Proxmox environment before release.
 
-### 2. Edge-routed mode
+## Documentation and support
 
-Use this for:
-- production platforms with a dedicated edge/router appliance
-- HybridOps WAN edge / VyOS designs
-- environments where north-south routing should not be handled by the hypervisor
-
-Typical settings:
-
-```hcl
-enable_host_l3 = false
-enable_snat    = false
-enable_dhcp    = false
-```
-
-In this mode Proxmox SDN provides:
-- VLAN-backed segmentation
-- VNet and subnet object management
-
-and routing/DHCP are delegated to the actual edge or network services layer.
-
-Recommended production posture:
-- let **VyOS or the edge tier** own north-south routing and egress
-- keep Proxmox SDN focused on segmentation unless you explicitly want host-routed subnets
-
-### Cluster-wide zone membership
-
-Use `proxmox_nodes` when the same SDN zone and VNets must be available across a
-Proxmox cluster:
-
-```hcl
-proxmox_nodes = ["pve1", "pve2", "pve3"]
-proxmox_host  = "192.0.2.10"
-
-enable_host_l3 = false
-enable_snat    = false
-enable_dhcp    = false
-```
-
-When `proxmox_nodes` is empty, the module retains the existing
-`proxmox_node` behaviour. When it is set, the list takes precedence. Multi-node
-membership changes only the SDN zone's `nodes` property; it does not distribute
-SSH-based host configuration across the cluster.
-
-See [`examples/multi-node`](examples/multi-node) for a complete edge-routed
-cluster example.
-
-## Brownfield adoption
-
-If a site already has manually created Proxmox SDN objects, do **not** assume this
-module can safely take them over just by using the same names.
-
-Choose the ownership path before the first live plan.
-
-### Start with a new managed zone
-
-This is the lowest-risk path when the existing zone carries active workloads or
-its ownership is unclear.
-
-- Create a new zone and VNet set with IDs that do not overlap the existing set.
-- Test attachment, VLAN mapping, routing handoff, and teardown with a temporary
-  workload.
-- Move active workloads only after the new path and rollback have been checked.
-
-The existing objects remain outside this module and can continue to be managed
-separately.
-
-### Import and cut over existing objects
-
-Use this path only when the module is intended to become authoritative for the
-existing SDN objects.
-
-- Define the zone, VNets, and subnets in configuration before import.
-- Plan the selected zone, VNets, and subnets as one cutover.
-- Record the current Proxmox configuration and back up any existing Terraform
-  state.
-- Import each managed object into its intended resource address.
-- Review the first plan for replacement or deletion before allowing changes.
-- Schedule the cutover around the workloads attached to the affected VNets.
-
-Importing only the parent zone while active VNets and subnets remain manually
-managed splits ownership and makes destroy harder to review. Keep the set
-external until the cutover plan covers every object the module will own.
-
-Importing SDN objects does not require the module to take over routing. When a
-separate router owns gateways, DHCP, NAT, firewall policy, and static routes,
-keep host orchestration and the related host features disabled.
-
-### Keep existing objects externally managed
-
-This is a valid long-term boundary. The module can manage new zones while the
-existing zone, VNets, and subnets remain outside its state. Do not reuse those
-external IDs in the managed configuration.
-
-Whichever path is chosen, names alone do not transfer ownership. The module is
-authoritative only for the SDN objects represented in its Terraform state.
-
-## Destroy scope
-
-`terraform destroy` / `hyops destroy` is **zone-scoped**, not a blanket Proxmox
-network wipe.
-
-For imported objects, this scope follows Terraform state rather than how the
-objects were originally created. Review the destroy plan carefully after a
-brownfield cutover; Terraform cannot infer which imported objects an operator
-may later want to preserve.
-
-What it removes for the zone in its own state:
-- the SDN zone/VNet/subnet objects managed by the module
-- gateway addresses derived from that zone's gateway state files
-- NAT rules tagged for that zone
-- dnsmasq DHCP units/configs matching that zone name
-
-What it does **not** intentionally remove:
-- unrelated Proxmox bridges and manual Linux networking outside the zone
-- NAT rules not tagged with the module's comment format
-- DHCP units/configs for other zones
-- unrelated SDN zones not in this Terraform state
-
-Destroy is still disruptive for the zone it manages, so reserve it for:
-- controlled teardown
-- controlled rebuilds
-- deliberate decommission of a module-owned SDN segment
-
----
-
-## Known limitations
-
-- SDN zone and VNet IDs must follow **Proxmox SDN naming rules** (2-8 chars, must start with a letter, letters and digits only - Proxmox SDN ID constraint).
-- After `destroy`, VNet bridge interfaces may persist until networking is reloaded (`ifreload -a` / `pvesh set /cluster/sdn`).
-- `dnsmasq` is the only supported DHCP engine.
-- On older releases, Proxmox UI may show SDN status warnings even when traffic
-  flows correctly if host L3 gateway addresses were attached outside the
-  generated SDN interface file. Current releases normalise the generated
-  `vnet*` stanzas to `inet static` with the derived gateway address so UI
-  status aligns with the running host state.
-
----
-
-## Architecture & docs (HybridOps)
-
-This module implements the Proxmox SDN foundation used by [HybridOps](https://hybridops.tech) — a contract-driven execution platform for hybrid infrastructure — including VLAN allocation and NetBox/IPAM integration via the `ipam_prefixes` output.
-
-- [How-to: Proxmox SDN with Terraform](https://docs.hybridops.tech/howto/networking/HOWTO-proxmox-sdn-terraform/)
-- [Network Architecture](https://docs.hybridops.tech/guides/getting-started/20-network-architecture/)
-- [ADR-0101 – VLAN Allocation Strategy](https://docs.hybridops.tech/adr/ADR-0101-vlan-allocation-strategy/)
-- [ADR-0102 – Proxmox as Core Router](https://docs.hybridops.tech/adr/ADR-0102-proxmox-intra-site-core-router/)
-- [ADR-0104 – Static IP Allocation (Terraform IPAM)](https://docs.hybridops.tech/adr/ADR-0104-static-ip-allocation-terraform-ipam/)
-
----
-
-## License
-
-- Code: [MIT-0](./LICENSE)
-- Documentation and diagrams: [CC BY 4.0](https://docs.hybridops.tech/legal/documentation-license/)
-
-See the [HybridOps licensing overview](https://docs.hybridops.tech/legal/licensing/) for project-wide licence details.
-
----
+- [Proxmox SDN with Terraform](https://docs.hybridops.tech/howto/networking/HOWTO-proxmox-sdn-terraform/)
+- [Network architecture](https://docs.hybridops.tech/guides/getting-started/20-network-architecture/)
+- [VLAN allocation strategy](https://docs.hybridops.tech/adr/ADR-0101-vlan-allocation-strategy/)
+- [Changelog](CHANGELOG.md)
+- [Roadmap](ROADMAP.md)
+- [Issues](https://github.com/hybridops-tech/terraform-proxmox-sdn/issues)
 
 ## Contributing
 
-Contributions are welcome through GitHub:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and
+required validation. User-visible changes should include an appropriate
+changelog entry and updated examples where relevant.
 
-- [Contribution guide](./CONTRIBUTING.md)
-- [Project-wide contribution paths](https://docs.hybridops.tech/guides/reference/contributing/)
-- [Repository issues and pull requests](https://github.com/hybridops-tech/terraform-proxmox-sdn)
+## License
 
-Before opening a PR:
-
-- Run `terraform fmt`.
-- Run `terraform validate`.
-- Run the mocked root-module tests (no live Proxmox endpoint or credentials are
-  required):
-
-  ```bash
-  terraform init -backend=false -input=false
-  terraform test -no-color
-  ```
-
-- Validate changed configurations under `examples/` separately.
-- Update `examples/` if inputs or usage change.
-- Add a short entry to [`CHANGELOG.md`](./CHANGELOG.md).
+Code is licensed under [MIT-0](LICENSE). Documentation is licensed under
+[CC BY 4.0](https://docs.hybridops.tech/legal/documentation-license/).
