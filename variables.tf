@@ -170,6 +170,15 @@ variable "vnets" {
     condition     = alltrue([for k in keys(var.vnets) : can(regex("^[A-Za-z][A-Za-z0-9]{1,7}$", k))])
     error_message = "Each VNet ID must start with a letter, contain only letters and digits, and be 2-8 characters long (Proxmox SDN VNet ID constraint)."
   }
+  validation {
+    condition = alltrue([
+      for vnet in values(var.vnets) :
+      vnet.vlan_id >= 1 &&
+      vnet.vlan_id <= 4094 &&
+      vnet.vlan_id == floor(vnet.vlan_id)
+    ])
+    error_message = "Each VLAN ID must be a whole number between 1 and 4094."
+  }
 
 }
 
