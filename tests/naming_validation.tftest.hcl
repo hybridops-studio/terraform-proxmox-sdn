@@ -225,3 +225,143 @@ run "subnet_key_underscore_is_allowed" {
   }
 
 }
+
+run "vlan_id_min_valid" {
+  command = plan
+
+  variables {
+    zone_name = "hybzone"
+
+    vnets = {
+      vnetmgmt = {
+        vlan_id     = 1
+        description = "test"
+
+        subnets = {
+          subnet_name = {
+            cidr    = "10.10.0.0/24"
+            gateway = "10.10.0.1"
+          }
+        }
+      }
+    }
+  }
+}
+
+run "vlan_id_max_valid" {
+  command = plan
+
+  variables {
+    zone_name = "hybzone"
+
+    vnets = {
+      vnetmgmt = {
+        vlan_id     = 4094
+        description = "test"
+
+        subnets = {
+          subnet_name = {
+            cidr    = "10.10.0.0/24"
+            gateway = "10.10.0.1"
+          }
+        }
+      }
+    }
+  }
+}
+
+run "vlan_id_zero_invalid" {
+  command = plan
+
+  variables {
+    zone_name = "hybzone"
+
+    vnets = {
+      vnetmgmt = {
+        vlan_id     = 0
+        description = "test"
+
+        subnets = {
+          subnet_name = {
+            cidr    = "10.10.0.0/24"
+            gateway = "10.10.0.1"
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [var.vnets]
+}
+
+run "vlan_id_above_max_invalid" {
+  command = plan
+
+  variables {
+    zone_name = "hybzone"
+
+    vnets = {
+      vnetmgmt = {
+        vlan_id     = 4095
+        description = "test"
+
+        subnets = {
+          subnet_name = {
+            cidr    = "10.10.0.0/24"
+            gateway = "10.10.0.1"
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [var.vnets]
+}
+
+run "vlan_id_fractional_invalid" {
+  command = plan
+
+  variables {
+    zone_name = "hybzone"
+
+    vnets = {
+      vnetmgmt = {
+        vlan_id     = 10.5
+        description = "test"
+
+        subnets = {
+          subnet_name = {
+            cidr    = "10.10.0.0/24"
+            gateway = "10.10.0.1"
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [var.vnets]
+}
+
+run "vlan_id_negative_invalid" {
+  command = plan
+
+  variables {
+    zone_name = "hybzone"
+
+    vnets = {
+      vnetmgmt = {
+        vlan_id     = -1
+        description = "test"
+
+        subnets = {
+          subnet_name = {
+            cidr    = "10.10.0.0/24"
+            gateway = "10.10.0.1"
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [var.vnets]
+}
