@@ -2,6 +2,8 @@ name: ShellCheck
 
 on:
   push:
+    branches:
+      - main
   pull_request:
     types:
       - opened
@@ -33,7 +35,7 @@ jobs:
 
           tar -xzf "${SHELLCHECK_ARCHIVE}"
 
-          install -m755 \
+          sudo install -m755 \
             "shellcheck-${SHELLCHECK_VERSION}/shellcheck" \
             /usr/local/bin/shellcheck
 
@@ -42,20 +44,20 @@ jobs:
       - name: Run ShellCheck
         shell: bash
         run: |
-            set -euo pipefail
-        
-            status=0
-        
-            while IFS= read -r -d '' file; do
-              echo "Checking ${file}"
-        
-              if shellcheck --external-sources "$file"; then
-                echo "PASS"
-              else
-                status=1
-              fi
-        
-              echo
-            done < <(find scripts/setup scripts/cleanup -type f -name '*.sh' -print0)
-        
-            exit "$status"
+          set -euo pipefail
+
+          status=0
+
+          while IFS= read -r -d '' file; do
+            echo "Checking ${file}"
+
+            if shellcheck --external-sources "$file"; then
+              echo "PASS"
+            else
+              status=1
+            fi
+
+            echo
+          done < <(find scripts/setup scripts/cleanup -type f -name '*.sh' -print0)
+
+          exit "$status"
