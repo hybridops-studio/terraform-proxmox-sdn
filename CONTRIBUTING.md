@@ -7,6 +7,7 @@ Thank you for considering contributing to this project.
 ## How to Contribute
 
 1.Fork the repository.
+
 2.Create a feature branch:
 
    ```bash
@@ -14,7 +15,19 @@ Thank you for considering contributing to this project.
    ```
 
 3.Make your changes following the code standards below.
-4.Test with `terraform fmt`, `terraform validate`, the root module tests, and (where possible) an actual deployment.
+
+4.Test your changes:
+   - Run `terraform fmt`.
+   - Run `terraform validate`.
+   - Run the root module tests.
+   - Run ShellCheck if shell scripts were modified:
+     ```bash
+     shellcheck --external-sources scripts/setup/*.sh scripts/cleanup/*.sh
+     ```
+     - [ShellCheck installation guide](https://github.com/koalaman/shellcheck#user-content-installing)
+     - [VS Code - ShellCheck extension](https://marketplace.visualstudio.com/items?itemName=timonwong.shellcheck)
+   - Where possible, perform an actual deployment.
+
 5.Commit your changes:
 
    ```bash
