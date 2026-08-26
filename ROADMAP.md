@@ -4,9 +4,10 @@ This roadmap tracks planned evolution of the `terraform-proxmox-sdn` module.
 
 ## 0.1.x line
 
-Current line focuses on single-node Proxmox SDN with host-side orchestration.
+The stable 0.1.x line focuses on single-node Proxmox SDN with host-side
+orchestration.
 
-### Delivered (0.1.0–0.1.2)
+### Delivered (0.1.0-0.1.6)
 
 - Single-node, VLAN-backed SDN zone (L2 + optional host L3).
 - dnsmasq DHCP support with `dns_domain` and `dns_lease`.
@@ -21,35 +22,42 @@ Current line focuses on single-node Proxmox SDN with host-side orchestration.
   - `no-dhcp` (L3 + NAT, no DHCP)
   - `multi-node` (single-node “cluster zone” plus scaffold)
 - SDN auto-healing helper (optional) and systemd units.
+- Managed host static routes for upstream and cloud-prefix handoff.
 - Documentation:
   - Module README (usage, constraints, inputs/outputs)
   - HOWTO: Proxmox SDN with Terraform
   - SDN operations runbook (deploy/validate/troubleshoot)
 
-### Planned (remaining 0.1.x)
+## 0.2.x line
 
-- Stronger validation for:
-  - SDN IDs, VNet names, VLAN tags
-  - DHCP range conflicts and invalid flag combinations
-- Example hardening:
-  - Ensure all examples pass `terraform init -backend=false` and `terraform validate` against released versions
-  - Align comments and outputs for copy/paste consistency
-- Additional reference patterns:
-  - Small production-style layout (refined from the six-VLAN example)
-  - Minimal “L3 + NAT, no DHCP” pattern for sites with external DHCP
+The 0.2.x line adds cluster-aware SDN membership and an API-only operating
+mode while preserving the 0.1.x single-node input path.
 
-## 0.2.0
+### Delivered in 0.2.0-beta.1
 
-Cluster-aware multi-node SDN.
+- Optional cluster-wide node membership through `proxmox_nodes`.
+- API-only edge-routed deployments that do not require Proxmox host login.
+- Plan-time validation for SDN zone IDs, VNet IDs, and VLAN IDs.
+- Native Terraform tests for operating modes, node membership, and validation.
+- CI validation for the root module, every example, and host-side shell scripts.
+- Supported `multi-node` and `api-only-edge-routed` examples.
+- Brownfield ownership, import, access, and local validation guidance.
 
-- First-class multi-node support for a shared SDN zone across multiple Proxmox nodes.
-- Clear patterns for:
-  - Single zone across a small cluster
-  - Consistent VNet attachment across nodes
-- Improved Proxmox API error handling and diagnostics (timeouts, auth failures, partial SDN state).
-- Extended examples:
-  - Promote `multi-node` from scaffold to supported example
-  - Guidance for mixed automated + pre-existing SDN objects
+### Before 0.2.0 stable
+
+- Validate API-only and multi-node apply/destroy lifecycles against live Proxmox
+  environments.
+- Migrate deprecated `bpg/proxmox` SDN resource names before provider 1.0.
+- Complete high-value validation for incompatible host flags and DHCP ranges.
+- Resolve release-blocking findings from beta feedback.
+
+### Planned for later 0.2.x
+
+- Improved Proxmox API diagnostics for timeouts, authentication failures, and
+  partial SDN state.
+- Configurable host recovery watcher behaviour.
+- Additional IPAM output contract coverage.
+- Small production-style and external-DHCP reference patterns.
 
 ## 0.3.0
 

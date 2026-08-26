@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-beta.1] - 2026-08-26
+
 ### Added
 - `enable_host_orchestration` input for fresh edge-routed deployments that
   manage Proxmox SDN objects without Proxmox host login.
@@ -16,10 +18,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional `proxmox_nodes` input for assigning one SDN zone and its VNets to
   several Proxmox cluster nodes. Multi-node membership is edge-routed; host-side
   L3, SNAT, DHCP, and static routes remain single-host features.
-- `host_static_routes` input for host-routed Proxmox SDN deployments that need
-  selected upstream or cloud prefixes routed through a separate on-prem edge.
+- Plan-time validation for Proxmox SDN zone IDs, VNet IDs, and VLAN IDs.
+- Native Terraform tests for API-only operation, node membership, naming, and
+  VLAN validation.
+- Terraform module tests, example validation, and ShellCheck in CI.
 - Documentation guidance for dedicated Proxmox API tokens and separate SSH
   access for host-side SDN changes.
+
+### Changed
+- The `multi-node` example now demonstrates supported cluster-wide SDN zone
+  membership while retaining the existing single-node input path.
+- Documentation now covers brownfield ownership boundaries, import expectations,
+  example-specific inputs, and the local validation workflow.
+
+## [0.1.6] - 2026-03-21
+
+### Added
+- `host_static_routes` input for host-routed Proxmox SDN deployments that need
+  selected upstream or cloud prefixes routed through a separate on-prem edge.
 
 ### Changed
 - SDN auto-healing now reconciles HybridOps-managed host static routes in
