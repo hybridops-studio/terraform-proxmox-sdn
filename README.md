@@ -1,13 +1,36 @@
-# Proxmox SDN Terraform module
+<h1 align="center">Proxmox SDN Terraform module</h1>
 
-[![Terraform Registry](https://img.shields.io/badge/terraform_registry-hybridops--tech%2Fsdn%2Fproxmox-623CE4.svg)](https://registry.terraform.io/modules/hybridops-tech/sdn/proxmox)
-[![Terraform validate](https://github.com/hybridops-tech/terraform-proxmox-sdn/actions/workflows/terraform-validate.yml/badge.svg)](https://github.com/hybridops-tech/terraform-proxmox-sdn/actions/workflows/terraform-validate.yml)
+<p align="center">
+  <strong>Build Proxmox SDN zones, VNets and subnets with Terraform—using API-only networking or optional gateway, SNAT, DHCP and static-route orchestration.</strong>
+</p>
 
-Terraform module for Proxmox VE SDN zones, VNets and subnets. Optional host
-orchestration configures gateway addresses, SNAT, static routes and dnsmasq
-DHCP on a Proxmox node.
+<p align="center">
+  <a href="https://registry.terraform.io/modules/hybridops-tech/sdn/proxmox/latest"><img alt="Terraform Registry" src="https://img.shields.io/badge/terraform_registry-hybridops--tech%2Fsdn%2Fproxmox-623CE4.svg"></a>
+  <a href="https://github.com/hybridops-tech/terraform-proxmox-sdn/actions/workflows/terraform-validate.yml"><img alt="Terraform validate" src="https://github.com/hybridops-tech/terraform-proxmox-sdn/actions/workflows/terraform-validate.yml/badge.svg"></a>
+</p>
 
-The module manages:
+<p align="center">
+  <a href="https://registry.terraform.io/modules/hybridops-tech/sdn/proxmox/latest">Terraform Registry</a> ·
+  <a href="https://docs.hybridops.tech/howto/networking/HOWTO-proxmox-sdn-terraform/">Documentation</a> ·
+  <a href="examples">Examples</a> ·
+  <a href="ROADMAP.md">Roadmap</a>
+</p>
+
+A purpose-built Terraform module for Proxmox VE SDN. It keeps the operating boundary explicit: use the Proxmox API for zone, VNet and subnet objects, then opt into host orchestration when the selected node should also provide gateway, routing, SNAT or DHCP services.
+
+```mermaid
+flowchart LR
+    tf["Terraform"] --> api["Proxmox API"]
+    api --> zone["SDN zone"]
+    zone --> vnets["VNets"]
+    vnets --> subnets["Subnets and IPAM outputs"]
+    tf -. "optional SSH" .-> node["Selected Proxmox node"]
+    node --> services["Gateway · routes · SNAT · DHCP"]
+```
+
+The multi-node reference path has been exercised across three cluster members: the VNet was available to a disposable guest on each node, the guests reached the external gateway and one another, and the runner completed the operation through API requests while SSH to the node subnet remained blocked.
+
+## What the module manages
 
 - a VLAN-backed Proxmox SDN zone;
 - one or more VNets and subnets;
@@ -106,6 +129,8 @@ terraform apply
 ```
 
 Do not commit API tokens or populated `terraform.tfvars` files.
+
+If this module solves a problem in your Proxmox environment, star the repository to follow new releases.
 
 ## Host-routed configuration
 
